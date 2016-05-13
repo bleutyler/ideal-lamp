@@ -1,0 +1,21 @@
+INFO:root:Script Starting
+INFO:root:Script Starting
+INFO:root:Script Starting
+DEBUG:root:script servername is: <built-in function gethostname>
+INFO:root:Script Starting
+DEBUG:root:script servername is: tslijboom-VirtualBox
+INFO:root:Script Starting
+DEBUG:root:script servername is: tslijboom-VirtualBox
+DEBUG:root:using the configuration file: /home/tslijboom/tools--config-manager-ini/etc/config_manager.ini
+INFO:root:Script Starting, running in mode: install
+DEBUG:root:script servername is: tslijboom-VirtualBox
+DEBUG:root:using the configuration file: /home/tslijboom/tools--config-manager-ini/etc/config_manager.ini
+INFO:root:Script Starting, running in mode: u
+DEBUG:root:script servername is: tslijboom-VirtualBox
+DEBUG:root:using the configuration file: /home/tslijboom/tools--config-manager-ini/etc/config_manager.ini
+INFO:root:Script Starting, running in mode: upgrade
+DEBUG:root:script servername is: tslijboom-VirtualBox
+DEBUG:root:using the configuration file: /home/tslijboom/tools--config-manager-ini/etc/config_manager.ini
+INFO:root:Script Starting, running in mode: verify
+DEBUG:root:script servername is: tslijboom-VirtualBox
+DEBUG:root:using the configuration file: /home/tslijboom/tools--config-manager-ini/etc/config_manager.ini
