@@ -15,7 +15,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from sqlalchemy import Sequence
 
-engine = create_engine('postgresql://tslijboom:Kanata89@localhost/ConfigurationManager', echo=True)
+engine = create_engine('postgresql://tslijboom:Kanata89@localhost/ConfigurationManager', echo=False )
 
 Base = declarative_base()
 
@@ -23,7 +23,7 @@ class applicationDefaultValues( Base ):
     __tablename__ = 'application_default_values'
 
     id                   = Column( Integer, Sequence('application_default_values_id_sequence'), primary_key=True )
-    target_application   = Column( String )
+    application          = Column( String )
     ini_file_section     = Column( String )
     ini_field_name       = Column( String )
     ini_value            = Column( String )
@@ -33,8 +33,8 @@ class applicationDefaultValues( Base ):
 class currentConfigurationValues( Base ):
     __tablename__ = 'current_configuration_values'
     id                   = Column( Integer, Sequence('current_configuration_values_id_sequence'), primary_key=True )
-    target_box           = Column( String )
-    target_application   = Column( String )
+    server               = Column( String )
+    application          = Column( String )
     ini_file_section     = Column( String )
     ini_field_name       = Column( String )
     ini_value            = Column( String )
@@ -52,8 +52,8 @@ class manualChangeReason( Base ):
 class configurationHistory( Base ):
     __tablename__ = 'configuration_history'
     id                 = Column( Integer, Sequence('configuration_history_id_sequence'), primary_key=True )
-    target_box         = Column( String )   
-    target_application = Column( String )
+    server             = Column( String )   
+    application        = Column( String )
     ini_file_section   = Column( String )
     ini_field_name     = Column( String )
     ini_value          = Column( String )
