@@ -23,6 +23,7 @@ create table current_configuration_values (
     ini_file_section            varchar(50)     not null,
     ini_field_name              varchar(50)     not null,
     ini_value                   varchar(50)     ,
+    configured_by_user_flag     boolean         not null default True,
     -- ini_value_type              varchar(50)     not null,       -- INternal type defenition
     -- ini_value_max_range         integer(50)             ,       -- INternal type defenition
     -- ini_value_max_range         integer(50)             ,       -- INternal type defenition

@@ -10,7 +10,7 @@
 #       
 # ####################################################################
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, Boolean
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from sqlalchemy import Sequence
@@ -32,14 +32,15 @@ class applicationDefaultValues( Base ):
 
 class currentConfigurationValues( Base ):
     __tablename__ = 'current_configuration_values'
-    id                   = Column( Integer, Sequence('current_configuration_values_id_sequence'), primary_key=True )
-    server               = Column( String )
-    application          = Column( String )
-    ini_file_section     = Column( String )
-    ini_field_name       = Column( String )
-    ini_value            = Column( String )
-    changed_by_user      = Column( String )
-    changed_by_timestamp = Column( Integer )
+    id                      = Column( Integer, Sequence('current_configuration_values_id_sequence'), primary_key=True )
+    server                  = Column( String )
+    application             = Column( String )
+    ini_file_section        = Column( String )
+    ini_field_name          = Column( String )
+    ini_value               = Column( String )
+    configured_by_user_flag = Column( Boolean ) # not null default 0,
+    changed_by_user         = Column( String )
+    changed_by_timestamp    = Column( Integer )
 
 
 class manualChangeReason( Base ):

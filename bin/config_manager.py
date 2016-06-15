@@ -201,7 +201,7 @@ def readInDatabaseConfiguration( applicationName, serverName ):
 
 
 
-def updateDatabase( applicationName, serverName, finalIniConfig ):
+def updateDatabase( applicationName, serverName, finalIniConfig, signals_for_values_that_need_to_be_confirmed ):
     """ Iterate through a config parser object, and update the config manager database with the items inside.  """
     # Does there already exist such an object?  If so, delete them (because there may be items that changed)
     itemAlreadyInTheDBTest = table_definitions.session.query( table_definitions.currentConfigurationValues ).filter(
@@ -224,8 +224,10 @@ def updateDatabase( applicationName, serverName, finalIniConfig ):
             logging.debug( 'Okay, logging item: ' + str( configItem ) )
             itemField = configItem[0]
             itemValue = configItem[1]
+            configured_flag = signals_for_values_that_need_to_be_confirmed[  sectionName + itemField ]
             newConfigRow = table_definitions.currentConfigurationValues( server = serverName, application = applicationName,
                                                         ini_file_section = sectionName, ini_field_name = itemField, 
+                                                        configured_by_user_flag = configured_flag, 
                                                         ini_value = itemValue, changed_by_user = 'tslijboom', 
                                                         changed_by_timestamp = time.time() )
             listOfDBConfigsToInsert.append( newConfigRow )
@@ -236,10 +238,12 @@ def updateDatabase( applicationName, serverName, finalIniConfig ):
 def getDefaultValueFromDB( application, section, field):
     defaultValueRow = table_definitions.session.query( table_definitions.applicationDefaultValues ).filter(
                              table_definitions.applicationDefaultValues.application == applicationName ).filter(
-                             table_definitions.applicationDefaultValues.ini_file_section == applicationName ).filter(
-                             table_definitions.applicationDefaultValues.application == applicationName ).first()
+                             table_definitions.applicationDefaultValues.ini_file_section == section ).filter(
+                             table_definitions.applicationDefaultValues.ini_field_name == field ).first()
     if defaultValueRow:
-        return defaultValueRow.value
+        logging.debug( 'There is a DEFAULT value for: ' + applicationName + '::[' + section + ']::' + field + ' = ' + str( defaultValueRow.ini_value) )
+        return defaultValueRow.ini_value
+    logging.debug( 'No DEFAULT' )
     return None
 
 
@@ -390,6 +394,8 @@ def main():
         finalIniFileOutput = """"""
         sampleIniFileHandle = open( templateIniFile, 'r' )
         currentSectionInTheFile = None
+        flag_that_the_item_is_properly_configured = {}
+        ## create a list of SQLAlch objects
         for line in sampleIniFileHandle:
             # A comment line or whitespace only line
             if line[0:1] == '#' or line.isspace() or line == '\n':
@@ -409,10 +415,14 @@ def main():
                 value = None
                 try:
                     value = databaseCopyOfTheIni.get( currentSectionInTheFile, fieldName ) 
+                    logging.debug( 'vvvvvalue comes from the database, (already configured)' )
+                    flag_that_the_item_is_properly_configured[ (currentSectionInTheFile + fieldName).lower() ] = True
                 except:  #NoSectionError = not there
                     try:
                         value = currentIniFileConfiguration.get( currentSectionInTheFile, fieldName)
-                        # THERE SHOULD BE A WARNING BECAUSE THE DB does not have it
+                        # THERE SHOULD BE A WARNING BECAUSE THE DB does not have it, below is NOT that flag
+                        logging.debug( 'vvvvvalue comes from the current configuration, (already configured)' )
+                        flag_that_the_item_is_properly_configured[ (currentSectionInTheFile + fieldName).lower()  ] = True
                     except:
                         # Okay, this has no value in the applications current INI file, or the DB. 
                         # check if there is a default  -- THIS WILL INCLUDE VERSION LATER
@@ -423,9 +433,12 @@ def main():
                             # Value here coudl be the empty string but a valid value for the config,
                             finalIniConfig.set( currentSectionInTheFile, fieldName, '' )
                             # Flag that the INI Config is NOT ready to be written - unless forced?
+                            flag_that_the_item_is_properly_configured[ (currentSectionInTheFile + fieldName).lower()  ] = False
                         else:
                             # default value could be '' that could be a valid value 
-                            finalIniConfig.set( currentSectionInTheFile, fieldName, defaultValue )
+                            value = defaultValue
+                            logging.debug( 'vvvvvalue comes from the DEFAULT db ' )
+                            flag_that_the_item_is_properly_configured[ (currentSectionInTheFile + fieldName).lower()  ] = True
 
             
                 logging.debug( currentSectionInTheFile + '::' + fieldName + ' with value "' + str( value ) + '"' )
@@ -447,7 +460,9 @@ def main():
         # Now, is the final INI section fill?  Valid?  Can the final INI be written?
 
         # 5. Update the DB with the current running INI
-        updateDatabase( applicationName, serverName, finalIniConfig )
+        logging.debug( 'Okay so the FINAL ini configparser object is: ' + str( finalIniConfig ) )
+        logging.debug( 'And the hash is: ' + str( flag_that_the_item_is_properly_configured ) )
+        updateDatabase( applicationName, serverName, finalIniConfig, flag_that_the_item_is_properly_configured )
 
         # 4.5 write the final INI file
         finalIniFileDestination = applicationName.replace( 'bin', '' ) + '/etc/' + applicationName + '.ini' 
