@@ -21,6 +21,7 @@ import table_definitions
 import getpass
 import re
 import jinja2
+import inspect
 
 from socket import gethostname
 
@@ -114,7 +115,7 @@ logging.debug( 'The APP and SERV names are: "' + applicationName + '" and "' + s
 def isAnIPAddress( testValue ):
     """  The value must be an IPv4 or IPv6 address  """
     try:
-        ipTest = ipaddress.ipaddress( testValue )
+        ipTest = ipaddress.ip_address( testValue )
     except ValueError:
         return False 
     return True
@@ -122,34 +123,46 @@ def isAnIPAddress( testValue ):
 
 
 def isAnInteger( testValue ):
-    """  The value must be an integer  """
-    try:
-        integerTest = int( testValue )
-    except ValueError:
-        return False
-    return True
+    """  The value must be an integer  ,
+        The value must not contain decimal points."""
+    testValue_is_str = isinstance(testValue, str)
+    if testValue_is_str:
+        try:
+            int(testValue)
+            return True
+        except ValueError:
+            return False
+    else:
+        return isinstance(testValue, int)
+
 
 def isAlphaNumericString( testValue ):
     """  The value must be made up of letters and/or digits """
-    if testValue == '':
+
+    testValue = str(testValue)
+    testValue_is_valid = re.compile("^[a-zA-Z0-9,-\/ ]*$")
+    if testValue_is_valid.search(testValue) is not None:
         return True
-    #return testValue.isalpha()
-    return True
+    else:
+        return False
+
 
 # This is a Jinja2 template string, at least the __doc__ is
 def inRange( testValue, minimumValue, maximumValue ):
     """  The value must be in the range of {{minimumValue}} and {{ maximumValue }} """
     if isAnInteger( minimumValue ):
         if isAnInteger( maximumValue ):
-            if testValue <= maximumValue and testValue >= minimumValue:
-                return True
+            if isAnInteger( testValue ):
+                if int(testValue) <= int(maximumValue) and int(testValue) >= int(minimumValue):
+                    return True
+                else:
+                    return False
             else:
-                return False
+                raise TypeError( 'test value "' + str( testValue ) + '" is not an integer' )
         else:
             raise TypeError( 'maximum value "' + str( maximumValue ) + '" is not an integer' )
     else:
         raise TypeError( 'minimum value "' + str( minimumValue ) + '" is not an integer' )
-
 
 ###################################################################################
 ##### Helper Functions
@@ -280,11 +293,19 @@ def getVariableNameAndVerificationFunctions( lineFromTheFile ):
 
         is extracted and comes back as:
         ( 'level', ( 'isAnInteger( "{0}" )', 'nextSampleFunctionName( "{0}" )' ) )
+        This function is checking if correct number of arguments are given to a function.
+        If there is a problem in arguments or function name it will return as
+        ('level',[])
     """
-    parsedListOfVerificationFunctions = []
-    listOfValuePropertyFunctions = re.split( '[ \n]', lineFromTheFile )   # temporary, used to build parsed version
-    fieldName = listOfValuePropertyFunctions.pop(0)
+    # Will build this and return it at the end
+    parsedListOfVerificationFunctions = []  
+
+    # temporary, used to build parsed version
+    listOfValuePropertyFunctions = re.split( '[ \n]', lineFromTheFile )   
+    logging.debug( '     The line is split into: ' + str(listOfValuePropertyFunctions) )
+
     equationBuffer = []  # Functions like inRange have other values to add, so put those in this temporary array while we extract
+
     for item in reversed( listOfValuePropertyFunctions ):
         if item == '\n' or len( item ) < 1 or repr( item ) == '':
             continue
@@ -293,162 +314,185 @@ def getVariableNameAndVerificationFunctions( lineFromTheFile ):
             equationBuffer.append( str( item ) )
             continue
         except ValueError:
+
             # This item is not an integer
             pass
-
         try:
+            logging.debug( '     I think that "' + item + '" contains a function!' )
             eval( item )
             if equationBuffer:
-                parsedListOfVerificationFunctions.append( str( item ).replace( '\n', '' ) 
-                    + '( {0}, ' + ','.join(equationBuffer) + ' )' ) 
-                
+                logging.debug( '     there are other arguments' )
+                if(len(equationBuffer) > (len(inspect.getargspec(eval( item ))[0])-1)):
+                    print("WARNING : Function arguments are more than expected. "+
+                          "Skipping function.")
+                    break
+                if(len(equationBuffer) < (len(inspect.getargspec(eval( item ))[0])-1)):
+                    print("WARNING : Function arguments are less than expected. "+
+                          "Skipping function.")
+                    break
+
+                parsedListOfVerificationFunctions.append( str( item ).replace( '\n', '' )
+                    + '( {0}, ' + ','.join(equationBuffer) + ' )' )
+
                 equationBuffer = []
             else:
+                logging.debug( '     {0} is the only argument ' )
+                if((len(inspect.getargspec(eval( item ))[0])-1) > 1):
+                    print("WARNING: No arguments provided to the function. "+
+                          "Skipping function.")
+                    break
                 functionName = str( item ).replace( '\n', '' )
                 if functionName == 'isAlphaNumericString':
-                    parsedListOfVerificationFunctions.append( functionName  + '( "{0}" )' ) 
+                    parsedListOfVerificationFunctions.append( functionName  + '( "{0}" )' )
                 else:
-                    parsedListOfVerificationFunctions.append( functionName  + '( {0} )' ) 
-        except :
+                    parsedListOfVerificationFunctions.append( functionName  + '( {0} )' )
+
+        except Exception as errorEncountered:
             equationBuffer.append( str( item ) )
 
+    fieldName = listOfValuePropertyFunctions.pop(0)
     return( fieldName, parsedListOfVerificationFunctions )
 
 ###################################################################################
 ##### Main Logic
 ###################################################################################
 
+def main():
+    if commandLineArguments.action == 'upgrade':
+        logging.info( 'Going to perform an upgrade' )
+        # 1. Read in the current INI file for the running application
+        # I think this needs to be picked up another time and compared against the DB results.
+        currentIniFile = os.getcwd().replace( 'bin', '' ) + '/etc/' + applicationName + '.ini'
+        if commandLineArguments.inputinifile:
+            curentIniFile = commandLineArgments.inputinifile
+        logging.debug( 'Going to open the current application ini file which is: ' + currentIniFile )
+        currentIniFileConfiguration = None
+        if os.path.exists( currentIniFile ):
+            currentIniFileConfiguration = readInIniFile( currentIniFile )
+            logging.debug( 'So I found these sections in the current.ini: ' + str( currentIniFileConfiguration.sections() ) )
 
-if commandLineArguments.action == 'upgrade':
-    logging.info( 'Going to perform an upgrade' )
-    # 1. Read in the current INI file for the running application
-    # I think this needs to be picked up another time and compared against the DB results.
-    currentIniFile = os.getcwd().replace( 'bin', '' ) + '/etc/' + applicationName + '.ini'
-    if commandLineArguments.inputinifile:
-        curentIniFile = commandLineArgments.inputinifile
-    logging.debug( 'Going to open the current application ini file which is: ' + currentIniFile )
-    currentIniFileConfiguration = None
-    if os.path.exists( currentIniFile ):
-        currentIniFileConfiguration = readInIniFile( currentIniFile )
-        logging.debug( 'So I found these sections in the current.ini: ' + str( currentIniFileConfiguration.sections() ) )
+        # 1.1 Read in iniValuesThatAreManuallySupplied, that was done at the agruments section at the top
+        # 2. Read in the INI configuration of the DB
+        #databaseCopyOfTheIni = readInDatabaseConfiguration( serverName, applicationName, dbConnectionHandle )
+        databaseCopyOfTheIni = readInDatabaseConfiguration( applicationName, serverName )
 
-    # 1.1 Read in iniValuesThatAreManuallySupplied, that was done at the agruments section at the top
-    # 2. Read in the INI configuration of the DB
-    #databaseCopyOfTheIni = readInDatabaseConfiguration( serverName, applicationName, dbConnectionHandle )
-    databaseCopyOfTheIni = readInDatabaseConfiguration( applicationName, serverName )
+        # 3. Read in the sample.INI file, iterate through it line by line 
+        templateIniFile = None
+        if 'etc' in os.getcwd():
+            templateIniFile = os.getcwd()  + '/sample.ini'
+        elif 'bin' in os.getcwd():
+            templateIniFile = os.getcwd().replace( 'bin', '' )  + '/etc/sample.ini'
 
-    # 3. Read in the sample.INI file, iterate through it line by line 
-    templateIniFile = os.getcwd().replace( 'bin', '' )  + '/etc/sample.ini'
-    if commandLineArguments.templateinifile:
-        templateIniFile = commandLineArguments.templateinifile
-    logging.debug( 'Going to open the sample ini file: ' + templateIniFile )
-    finalIniConfig = configparser.ConfigParser()
-    finalIniFileOutput = """"""
-    sampleIniFileHandle = open( templateIniFile, 'r' )
-    currentSectionInTheFile = None
-    for line in sampleIniFileHandle:
-        # A comment line or whitespace only line
-        if line[0:1] == '#' or line.isspace() or line == '\n':
-            pass
-        elif line[0:1] == '[':
-            # have to trim off newline and ]
-            logging.debug( 'Found section ' + line[1:-2] )
-            finalIniConfig.add_section( line[1:-2] )
-            currentSectionInTheFile = line[1:-2]
-            finalIniFileOutput = finalIniFileOutput + '\n' + line
-        else:
-            # So this is a line of a field to be evaluated.  First, get the value name and then the verification Functions
-            ( fieldName, parsedListOfVerificationFunctions ) = getVariableNameAndVerificationFunctions( line )
-            logging.debug( ' == fieldname: ' + fieldName + ' and ' + str( parsedListOfVerificationFunctions ) )
-
-            # Now, source of this data ?  
-            value = None
-            try:
-                value = databaseCopyOfTheIni.get( currentSectionInTheFile, fieldName ) 
-            except:  #NoSectionError = not there
-                try:
-                    value = currentIniFileConfiguration.get( currentSectionInTheFile, fieldName)
-                    # THERE SHOULD BE A WARNING BECAUSE THE DB does not have it
-                except:
-                    # Okay, this has no value in the applications current INI file, or the DB. 
-                    # check if there is a default  -- THIS WILL INCLUDE VERSION LATER
-                    logging.debug( 'no Current value or value in the DB, default exists?' )
-                    defaultValue = getDefaultValueFromDB( applicationName, currentSectionInTheFile, fieldName )
-                    if defaultValue is None:
-                        logging.debug( 'Unable to find a value for item (' + fieldName + ') ')
-                        # Value here coudl be the empty string but a valid value for the config,
-                        finalIniConfig.set( currentSectionInTheFile, fieldName, '' )
-                        # Flag that the INI Config is NOT ready to be written - unless forced?
-                    else:
-                        # default value could be '' that could be a valid value 
-                        finalIniConfig.set( currentSectionInTheFile, fieldName, defaultValue )
-
-        
-            logging.debug( currentSectionInTheFile + '::' + fieldName + ' with value "' + str( value ) + '"' )
-            if testConfigValueAgainstFunctions( value, parsedListOfVerificationFunctions ):
-                logging.debug( 'Passed sample.ini field restrictions' )
-                if value == None:
-                    value = ''
-                finalIniConfig.set( currentSectionInTheFile, fieldName, value )
+        if commandLineArguments.templateinifile:
+            templateIniFile = commandLineArguments.templateinifile
+        logging.debug( 'Going to open the template / sample ini file: ' + templateIniFile )
+        finalIniConfig = configparser.ConfigParser()
+        finalIniFileOutput = """"""
+        sampleIniFileHandle = open( templateIniFile, 'r' )
+        currentSectionInTheFile = None
+        for line in sampleIniFileHandle:
+            # A comment line or whitespace only line
+            if line[0:1] == '#' or line.isspace() or line == '\n':
+                pass
+            elif line[0:1] == '[':
+                # have to trim off newline and ]
+                logging.debug( 'Found section ' + line[1:-2] )
+                finalIniConfig.add_section( line[1:-2] )
+                currentSectionInTheFile = line[1:-2]
+                finalIniFileOutput = finalIniFileOutput + '\n' + line
             else:
-                logging.debug( 'Failed sample.ini field restrictions' )
-                if value == None:
-                    value = ''
-                finalIniConfig.set( currentSectionInTheFile, fieldName, value )
-                # Need to write the item as NOT CONFIGURED FAILED TO CONFIGURE
+                # So this is a line of a field to be evaluated.  First, get the value name and then the verification Functions
+                ( fieldName, parsedListOfVerificationFunctions ) = getVariableNameAndVerificationFunctions( line )
+                logging.debug( ' == fieldname: ' + fieldName + ' and ' + str( parsedListOfVerificationFunctions ) )
+
+                # Now, source of this data ?  
+                value = None
+                try:
+                    value = databaseCopyOfTheIni.get( currentSectionInTheFile, fieldName ) 
+                except:  #NoSectionError = not there
+                    try:
+                        value = currentIniFileConfiguration.get( currentSectionInTheFile, fieldName)
+                        # THERE SHOULD BE A WARNING BECAUSE THE DB does not have it
+                    except:
+                        # Okay, this has no value in the applications current INI file, or the DB. 
+                        # check if there is a default  -- THIS WILL INCLUDE VERSION LATER
+                        logging.debug( 'no Current value or value in the DB, default exists?' )
+                        defaultValue = getDefaultValueFromDB( applicationName, currentSectionInTheFile, fieldName )
+                        if defaultValue is None:
+                            logging.debug( 'Unable to find a value for item (' + fieldName + ') ')
+                            # Value here coudl be the empty string but a valid value for the config,
+                            finalIniConfig.set( currentSectionInTheFile, fieldName, '' )
+                            # Flag that the INI Config is NOT ready to be written - unless forced?
+                        else:
+                            # default value could be '' that could be a valid value 
+                            finalIniConfig.set( currentSectionInTheFile, fieldName, defaultValue )
+
+            
+                logging.debug( currentSectionInTheFile + '::' + fieldName + ' with value "' + str( value ) + '"' )
+                if testConfigValueAgainstFunctions( value, parsedListOfVerificationFunctions ):
+                    logging.debug( 'Passed sample.ini field restrictions' )
+                    if value == None:
+                        value = ''
+                    finalIniConfig.set( currentSectionInTheFile, fieldName, value )
+                else:
+                    logging.debug( 'Failed sample.ini field restrictions' )
+                    if value == None:
+                        value = ''
+                    finalIniConfig.set( currentSectionInTheFile, fieldName, value )
+                    # Need to write the item as NOT CONFIGURED FAILED TO CONFIGURE
 
 
-    sampleIniFileHandle.close()
+        sampleIniFileHandle.close()
 
-    # Now, is the final INI section fill?  Valid?  Can the final INI be written?
+        # Now, is the final INI section fill?  Valid?  Can the final INI be written?
 
-    # 5. Update the DB with the current running INI
-    updateDatabase( applicationName, serverName, finalIniConfig )
+        # 5. Update the DB with the current running INI
+        updateDatabase( applicationName, serverName, finalIniConfig )
 
-    # 4.5 write the final INI file
-    finalIniFileDestination = applicationName.replace( 'bin', '' ) + '/etc/' + applicationName + '.ini' 
-    if commandLineArguments.outputinifile:
-        finalIniFileDestination = commandLineArguments.outputinifile
-    #logging.info( 'FINAL Ini output file: ' + finalIniFileDestination )
-    # If we wanted a final output INI with NO comments, do this: #finalIniConfig.write( finalIniFileHandle )
-    #finalIniFileHandle = open( finalIniFileDestination, 'w' )
-    #finalIniFileHandle.write( finalIniFileOutput )
-    #finalIniFileHandle.close()
+        # 4.5 write the final INI file
+        finalIniFileDestination = applicationName.replace( 'bin', '' ) + '/etc/' + applicationName + '.ini' 
+        if commandLineArguments.outputinifile:
+            finalIniFileDestination = commandLineArguments.outputinifile
+        #logging.info( 'FINAL Ini output file: ' + finalIniFileDestination )
+        # If we wanted a final output INI with NO comments, do this: #finalIniConfig.write( finalIniFileHandle )
+        #finalIniFileHandle = open( finalIniFileDestination, 'w' )
+        #finalIniFileHandle.write( finalIniFileOutput )
+        #finalIniFileHandle.close()
 
 
 
-elif commandLineArguments.action == 'install':
-    # 2. Read in the INI configuration of the DB
-    # 3. Read in the sample.INI file
-    # 4. Using 2 and iniValuesThatAreManuallySupplied, create final.ini
-    # 5. Update the DB with the current running INI
-    pass
+    elif commandLineArguments.action == 'install':
+        # 2. Read in the INI configuration of the DB
+        # 3. Read in the sample.INI file
+        # 4. Using 2 and iniValuesThatAreManuallySupplied, create final.ini
+        # 5. Update the DB with the current running INI
+        pass
 
-elif commandLineArguments.action == 'verify':
-    # 1. Read in the current INI file for the running application
-    currentIniFile = applicationName.replace( 'bin', 'etc' ) + '/old_application_configuration.ini'
-    if commandLineArguments.inputinifile:
-        curentIniFile = commandLineArgments.inputinifile
-    logging.debug( 'Going to open the current application ini file which is: ' + currentIniFile )
-    try:
-        currentIniFileConfiguration = readInIniFile( currentIniFile )
-    except:
-        print( 'Failed to read in config file ' + currentIniFile )
-        sys.exit( 7 )
+    elif commandLineArguments.action == 'verify':
+        # 1. Read in the current INI file for the running application
+        currentIniFile = applicationName.replace( 'bin', 'etc' ) + '/old_application_configuration.ini'
+        if commandLineArguments.inputinifile:
+            curentIniFile = commandLineArgments.inputinifile
+        logging.debug( 'Going to open the current application ini file which is: ' + currentIniFile )
+        try:
+            currentIniFileConfiguration = readInIniFile( currentIniFile )
+        except:
+            print( 'Failed to read in config file ' + currentIniFile )
+            sys.exit( 7 )
 
-elif commandLineArguments.action == 'sync':
-    # 5. Update the DB with the current running INI
-    currentIniFile = applicationName.replace( 'bin', 'etc' ) + '/old_application_configuration.ini'
-    if commandLineArguments.inputinifile:
-        curentIniFile = commandLineArgments.inputinifile
-    logging.debug( 'Going to open the current application ini file which is: ' + currentIniFile )
-    try:
-        currentIniFileConfiguration = readInIniFile( currentIniFile )
-    except:
-        print( 'Failed to read in config file ' + currentIniFile )
-        sys.exit( 7 )
+    elif commandLineArguments.action == 'sync':
+        # 5. Update the DB with the current running INI
+        currentIniFile = applicationName.replace( 'bin', 'etc' ) + '/old_application_configuration.ini'
+        if commandLineArguments.inputinifile:
+            curentIniFile = commandLineArgments.inputinifile
+        logging.debug( 'Going to open the current application ini file which is: ' + currentIniFile )
+        try:
+            currentIniFileConfiguration = readInIniFile( currentIniFile )
+        except:
+            print( 'Failed to read in config file ' + currentIniFile )
+            sys.exit( 7 )
 
-    updateDatabase( applicationName, serverName, currentIniFileConfiguration )
+        updateDatabase( applicationName, serverName, currentIniFileConfiguration )
 
 # If run from the command line, we need: (argparse)
 # username for changes example: (tslijboom)
@@ -463,3 +507,5 @@ elif commandLineArguments.action == 'sync':
 #   installation, then just ask for them from the terminal.
 
 
+if __name__ == '__main__': 
+    main()
