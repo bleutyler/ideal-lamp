@@ -1,0 +1,11 @@
+[postgresql]
+server isAlphaNumericString
+database isAlphaNumericString
+schema isAlphaNumericString
+username  isAlphaNumericString
+# This field is either the password '1234' or '6789' 
+password noOp
+
+[hpna]
+server isDefault hpnaserver
+port isDefault hpnaserverport

@@ -1,0 +1,43 @@
+ROUGH  EXAMPLE:
+=====================================================================
+[hpna]
+server isAlphaNumeric defaultValue THIS_IS_A_DEFAULT
+username =  {{ db_username | email_address_filter }}
+password =  {{ db_password }}
+server = tools-db-wldb.service.ntw.blackberry
+database = systems_tools
+schema = assets
+
+staleRecordDays isAnInteger inRange 365 1
+staleRecordErrorThreshold isAnInteger inRange 365 1 default 100
+
+username defaultValue ws_cmdb
+server defaultValue reportingdb.cmdb.altus.rim.net
+
+[logging]
+db_type = db
+db_level =  {{ logging_level | valid_values( debug, info, warn, error, critical ) }}
+db_server = tools-db-wldb.service.ntw.blackberry
+db_username = discovery_user
+db_password = <password>
+db_database = systems_tools
+db_schema = tools_logging
+db_table = log_events
+warnings_type = email
+warnings_level = warning
+warnings_from_address isAnEmailAddress default bbgn-td@rim.net
+warnings_to_address = {{ global-team-dl }}
+warnings_subject = {{ subject_line }}
+
+{# 
+    Send logs to this address if the database fails
+#}
+backup_type = email
+backup_level = info
+backup_from_address = bbgn-td@rim.net
+backup_to_address = bbgn-td@rim.com
+backup_subject = {{ application_name }} Database Logging Failed
+backup_body = Database logging failed to log these messages:
+
+destination = db > backup, warnings
+

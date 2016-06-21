@@ -6,7 +6,7 @@
 #    > Company: Blackberry
 #    > Contact: tslijboom@juniper.net
 #    > Version: 0.2.8
-#    > Revision Date: 2015-06-16
+#    > Revision Date: field will have to remain completely emptu:015-06-16
 #       
 # ####################################################################
 # ----------[ IMPORTS ]----------
@@ -24,6 +24,7 @@ import jinja2
 import inspect
 
 from socket import gethostname
+from config_manager_lib import *
 
 ###################################################################################
 ##### Script setup, arguments, configuration file, db connection and logging
@@ -95,8 +96,7 @@ applicationConfiguration.read( configurationFile )
 
 ###############
 # Logging
-#loggingFile = os.getcwd().replace( 'bin', '' ) + applicationConfiguration.get( 'logging', 'destinationFile' )
-loggingFile = '/home/tslijboom/tools--config-manager-ini/logs/config_manager.log'
+loggingFile = applicationConfiguration.get( 'logging', 'destinationFile' )
 logging.basicConfig(    filename = loggingFile,
                         level    = applicationConfiguration.get( 'logging', 'level' )
                         )
@@ -111,58 +111,6 @@ logging.debug( 'The APP and SERV names are: "' + applicationName + '" and "' + s
 ###############
 # The DB connection
 # See table_definitions.py
-
-def isAnIPAddress( testValue ):
-    """  The value must be an IPv4 or IPv6 address  """
-    try:
-        ipTest = ipaddress.ip_address( testValue )
-    except ValueError:
-        return False 
-    return True
-
-
-
-def isAnInteger( testValue ):
-    """  The value must be an integer  ,
-        The value must not contain decimal points."""
-    testValue_is_str = isinstance(testValue, str)
-    if testValue_is_str:
-        try:
-            int(testValue)
-            return True
-        except ValueError:
-            return False
-    else:
-        return isinstance(testValue, int)
-
-
-def isAlphaNumericString( testValue ):
-    """  The value must be made up of letters and/or digits """
-
-    testValue = str(testValue)
-    testValue_is_valid = re.compile("^[a-zA-Z0-9,-\/ ]*$")
-    if testValue_is_valid.search(testValue) is not None:
-        return True
-    else:
-        return False
-
-
-# This is a Jinja2 template string, at least the __doc__ is
-def inRange( testValue, minimumValue, maximumValue ):
-    """  The value must be in the range of {{minimumValue}} and {{ maximumValue }} """
-    if isAnInteger( minimumValue ):
-        if isAnInteger( maximumValue ):
-            if isAnInteger( testValue ):
-                if int(testValue) <= int(maximumValue) and int(testValue) >= int(minimumValue):
-                    return True
-                else:
-                    return False
-            else:
-                raise TypeError( 'test value "' + str( testValue ) + '" is not an integer' )
-        else:
-            raise TypeError( 'maximum value "' + str( maximumValue ) + '" is not an integer' )
-    else:
-        raise TypeError( 'minimum value "' + str( minimumValue ) + '" is not an integer' )
 
 ###################################################################################
 ##### Helper Functions
@@ -497,7 +445,7 @@ def main():
 
     elif commandLineArguments.action == 'sync':
         # 5. Update the DB with the current running INI
-        currentIniFile = applicationName.replace( 'bin', 'etc' ) + '/old_application_configuration.ini'
+        currentIniFile = os.getcwd().replace( 'bin', 'etc' ) + '/' + applicationName + '.ini'
         if commandLineArguments.inputinifile:
             curentIniFile = commandLineArgments.inputinifile
         logging.debug( 'Going to open the current application ini file which is: ' + currentIniFile )
