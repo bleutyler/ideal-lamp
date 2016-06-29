@@ -5,15 +5,13 @@ create table application_default_values (
     ini_file_section            varchar(50)     not null,
     ini_field_name              varchar(50)     not null,
     ini_value                   varchar(50)     not null,
+    application_version         varchar(20)     not null,       -- example: 1.0.34
     changed_by_user             varchar(20)     not null,       -- username of who changed it
     changed_by_timestamp        integer         not null        -- epoch timestamp when the above user updated this value
 );
 drop sequence application_default_values_id_sequence;
 create sequence application_default_values_id_sequence;
 
---               -                         -                             -
---               -                         -                             -
---               -                         -                             -
 
 drop   table if exists current_configuration_values ;
 create table current_configuration_values (
@@ -23,11 +21,9 @@ create table current_configuration_values (
     ini_file_section            varchar(50)     not null,
     ini_field_name              varchar(50)     not null,
     ini_value                   varchar(50)     ,
+    constraints_for_value       varchar(100)    ,
+    application_version         varchar(20)     not null,       -- example: 1.0.34
     configured_by_user_flag     boolean         not null default True,
-    -- ini_value_type              varchar(50)     not null,       -- INternal type defenition
-    -- ini_value_max_range         integer(50)             ,       -- INternal type defenition
-    -- ini_value_max_range         integer(50)             ,       -- INternal type defenition
-    -- ini_value_allowed_values    integer(500)            ,       -- comma seperated list of allowed values
     changed_by_user             varchar(20)     not null,       -- username of who changed it
     changed_by_timestamp        integer         not null        -- epoch timestamp when the above user updated this value
 );
@@ -64,6 +60,7 @@ create table configuration_history (
     ini_file_section        varchar(50)     not null,
     ini_field_name          varchar(50)     not null,
     ini_value               varchar(50)     not null,
+    application_version         varchar(20)     not null,       -- example: 1.0.34
     changed_by_user         varchar(20)     not null,       -- username of who changed it
     start_timestamp         integer         not null,       -- epoch timestamp when the above user updated this value
     change_reason_id        integer

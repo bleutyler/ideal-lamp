@@ -5,8 +5,8 @@
 #    > Support: Tyler Slijboom
 #    > Company: Blackberry
 #    > Contact: tslijboom@juniper.net
-#    > Version: 0.2.8
-#    > Revision Date: field will have to remain completely emptu:015-06-16
+#    > Version: 0.3.2
+#    > Revision Date: 2016-06-22
 #       
 # ####################################################################
 # ----------[ IMPORTS ]----------
@@ -41,8 +41,10 @@ argumentsParser.add_argument( '-i', dest='inputinifile', help='The current INI f
 argumentsParser.add_argument( '-m', dest='action', action='store', default='upgrade',
                                 help='Mode, can be one of (i)nstall, (u)pgrade, (v)erify note: install is default')
 argumentsParser.add_argument( '-o', dest='outputinifile', help='The file to output the final INI file to' )
+argumentsParser.add_argument( '-v', dest='version', help='The version of the application that you are managing' )
 argumentsParser.add_argument( '-s', dest='servername', help='The Machine name when update/insert/select from the DB' )
-argumentsParser.add_argument( '-t', dest='templateinifile', help='The template INI file used as the base for the application ini file' )
+argumentsParser.add_argument( '-t', dest='templateinifile', help='The template INI file used as the base for the application ini file.  Often referred to as sample.ini' )
+argumentsParser.add_argument( '-f', dest='homefolder', action='store', help='This is the root folder for all application files.  It is assumed that etc/ exists in here' )
 argumentsParser.add_argument( '--test', action='store' )
 
 commandLineArguments = argumentsParser.parse_args()
@@ -54,6 +56,10 @@ elif commandLineArguments.action == 'i' or commandLineArguments.action == 'insta
     commandLineArguments.action = 'install'
 elif commandLineArguments.action == 'v' or commandLineArguments.action == 'verify':
     commandLineArguments.action = 'verify'
+elif commandLineArguments.action == 's' or commandLineArguments.action == 'sync':
+    commandLineArguments.action = 'sync'
+elif commandLineArguments.action == 'd' or commandLineArguments.action == 'setdefaults':
+    commandLineArguments.action = 'setdefaults'
 else:
     print( 'Mode value passed is not valid' )
     argumentsParser.print_help()
@@ -77,10 +83,43 @@ serverName = str(os.uname().nodename)
 if commandLineArguments.servername:
     serverName = str(commandLineArguments.servername)
 
-#parse the application name from the CWD :  /home/username/WE_WANT_THIS_PART
-applicationName = os.getcwd().split( '/' )[3]
+#parse the application name from the CWD :  /home/WE_WANT_THIS_PART
 if commandLineArguments.applicationname:
     applicationName = str(commandLineArguments.applicationname)
+elif commandLineArguments.homefolder:
+    try:
+        applicationName = commandlineArguments.homefolder.split( '/' )[2]
+    except:
+        print( 'Failed to get the application name from ' + commandLineArguments.homefolder )
+else:
+    try:
+        applicationName = os.getcwd().split( '/' )[2]
+    except:
+        print( 'Failed to get the application name from CWD' )
+
+# this is the basis for finding files on the system, of the format /home/<applicationname> but can be other.
+#  Assuming that /etc exsits in that folder with relevant files.
+application_home_folder = None
+if commandLineArguments.homefolder:
+    application_home_folder = commandLineArguments.homefolder
+    logging.debug( '  -1-1-1-1-1 the character is: ' + application_home_folder[:-1] )
+    if application_home_folder[:-1] != '/': 
+        application_home_folder = application_home_folder + '/'
+    application_home_folder = commandLineArguments.homefolder
+else:
+    application_home_folder = '/home/' + applicationName + '/'
+
+applicationVersion = None
+if commandLineArguments.version:
+    applicationVersion = commandLineArguments.version
+else:
+    applicationVersion = table_definitions.session.query( table_definitions.currentConfigurationValues ).filter( 
+        table_definitions.currentConfigurationValues.server == serverName ).filter( 
+        table_definitions.currentConfigurationValues.application == applicationName ).order_by( 
+        table_definitions.currentConfigurationValues.application_version ).first()
+    if not applicationVersion:
+        logging.warn( 'No version for the application found.  Therefore starting at the beginning with 1.0.0' )
+        applicationVersion = '1.0.0'
 
 ###############
 # Internal configuration
@@ -96,8 +135,7 @@ applicationConfiguration.read( configurationFile )
 
 ###############
 # Logging
-loggingFile = applicationConfiguration.get( 'logging', 'destinationFile' )
-logging.basicConfig(    filename = loggingFile,
+logging.basicConfig(    filename = applicationConfiguration.get( 'logging', 'destinationFile' ),
                         level    = applicationConfiguration.get( 'logging', 'level' )
                         )
 logging.info( '################################################################' )
@@ -176,6 +214,7 @@ def updateDatabase( applicationName, serverName, finalIniConfig, signals_for_val
             newConfigRow = table_definitions.currentConfigurationValues( server = serverName, application = applicationName,
                                                         ini_file_section = sectionName, ini_field_name = itemField, 
                                                         configured_by_user_flag = configured_flag, 
+                                                        application_version = applicationVersion,
                                                         ini_value = itemValue, changed_by_user = 'tslijboom', 
                                                         changed_by_timestamp = time.time() )
             listOfDBConfigsToInsert.append( newConfigRow )
@@ -314,7 +353,7 @@ def main():
         logging.info( 'Going to perform an upgrade' )
         # 1. Read in the current INI file for the running application
         # I think this needs to be picked up another time and compared against the DB results.
-        currentIniFile = os.getcwd().replace( 'bin', '' ) + '/etc/' + applicationName + '.ini'
+        currentIniFile = application_home_folder + 'etc/' + applicationName + '.ini'
         if commandLineArguments.inputinifile:
             curentIniFile = commandLineArgments.inputinifile
         logging.debug( 'Going to open the current application ini file which is: ' + currentIniFile )
@@ -329,11 +368,9 @@ def main():
         databaseCopyOfTheIni = readInDatabaseConfiguration( applicationName, serverName )
 
         # 3. Read in the sample.INI file, iterate through it line by line 
-        templateIniFile = None
-        if 'etc' in os.getcwd():
-            templateIniFile = os.getcwd()  + '/sample.ini'
-        elif 'bin' in os.getcwd():
-            templateIniFile = os.getcwd().replace( 'bin', '' )  + '/etc/sample.ini'
+        templateIniFile = application_home_folder + '/etc/sample.ini' 
+        if not os.path.exists( templateIniFile ):
+            templateIniFile = application_home_folder + '/etc/' + applicationName + '.sample.ini' 
 
         if commandLineArguments.templateinifile:
             templateIniFile = commandLineArguments.templateinifile
@@ -443,9 +480,37 @@ def main():
             print( 'Failed to read in config file ' + currentIniFile )
             sys.exit( 7 )
 
+    elif commandLineArguments.action == 'setdefaults':
+        # 5. Update the DB with the current running INI
+        currentIniFile = application_home_folder + '/etc/' + applicationName + '.ini'
+        if commandLineArguments.inputinifile:
+            curentIniFile = commandLineArgments.inputinifile
+        logging.debug( 'Going to open the current application ini file which is: ' + currentIniFile )
+        try:
+            currentIniFileConfiguration = readInIniFile( currentIniFile )
+        except:
+            print( 'Failed to read in config file ' + currentIniFile )
+            sys.exit( 7 )
+        # iterate through the config items, and create a list of SQLAlchemy objects that hold all the information
+        listOfConfigurationItems = []
+        for sectionName in currentIniFileConfiguration.sections():
+            for configItem in currentIniFileConfiguration.items( sectionName ):
+                itemField = configItem[0]
+                itemValue = configItem[1]
+                newDefaultRow = table_definitions.applicationDefaultValues( application = applicationName,
+                                                        ini_file_section = sectionName, ini_field_name = itemField, 
+                                                        application_version = applicationVersion,
+                                                        ini_value = itemValue, changed_by_user = 'tslijboom', 
+                                                        changed_by_timestamp = time.time() )
+            listOfConfigurationItems.append( newDefaultRow )
+    
+        table_definitions.session.add_all( listOfConfigurationItems )
+        table_definitions.session.commit()
+
+ 
     elif commandLineArguments.action == 'sync':
         # 5. Update the DB with the current running INI
-        currentIniFile = os.getcwd().replace( 'bin', 'etc' ) + '/' + applicationName + '.ini'
+        currentIniFile = application_home_folder + '/etc/' + applicationName + '.ini'
         if commandLineArguments.inputinifile:
             curentIniFile = commandLineArgments.inputinifile
         logging.debug( 'Going to open the current application ini file which is: ' + currentIniFile )
@@ -455,7 +520,7 @@ def main():
             print( 'Failed to read in config file ' + currentIniFile )
             sys.exit( 7 )
 
-        updateDatabase( applicationName, serverName, currentIniFileConfiguration )
+        updateDatabase( applicationName, serverName, currentIniFileConfiguration, {} )
 
 # If run from the command line, we need: (argparse)
 # username for changes example: (tslijboom)

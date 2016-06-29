@@ -5,8 +5,8 @@
 #    > Support: Tyler Slijboom
 #    > Company: Blackberry
 #    > Contact: tslijboom@juniper.net
-#    > Version: 0.2.3
-#    > Revision Date: 2015-05-27
+#    > Version: 0.2.4
+#    > Revision Date: 2015-06-21
 #       
 # ####################################################################
 from sqlalchemy.ext.declarative import declarative_base
@@ -15,7 +15,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from sqlalchemy import Sequence
 
-engine = create_engine('postgresql://tslijboom:Kanata89@localhost/ConfigurationManager', echo=False )
+engine = create_engine('postgresql://tslijboom:test123@localhost/ConfigurationManager', echo=False )
 
 Base = declarative_base()
 
@@ -27,6 +27,7 @@ class applicationDefaultValues( Base ):
     ini_file_section     = Column( String )
     ini_field_name       = Column( String )
     ini_value            = Column( String )
+    application_version  = Column( String )
     changed_by_user      = Column( String )
     changed_by_timestamp = Column( Integer )
 
@@ -38,6 +39,8 @@ class currentConfigurationValues( Base ):
     ini_file_section        = Column( String )
     ini_field_name          = Column( String )
     ini_value               = Column( String )
+    constraints_for_value   = Column( String )
+    application_version  = Column( String )
     configured_by_user_flag = Column( Boolean ) # not null default 0,
     changed_by_user         = Column( String )
     changed_by_timestamp    = Column( Integer )
@@ -58,6 +61,7 @@ class configurationHistory( Base ):
     ini_file_section   = Column( String )
     ini_field_name     = Column( String )
     ini_value          = Column( String )
+    application_version  = Column( String )
     changed_by_user    = Column( String )
     start_timestamp    = Column( Integer )
     change_reason_id   = Column( Integer )
