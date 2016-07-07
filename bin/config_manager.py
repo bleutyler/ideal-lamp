@@ -113,13 +113,15 @@ applicationVersion = None
 if commandLineArguments.version:
     applicationVersion = commandLineArguments.version
 else:
-    applicationVersion = table_definitions.session.query( table_definitions.currentConfigurationValues ).filter( 
+    applicationVersionObj = table_definitions.session.query( table_definitions.currentConfigurationValues ).filter( 
         table_definitions.currentConfigurationValues.server == serverName ).filter( 
         table_definitions.currentConfigurationValues.application == applicationName ).order_by( 
         table_definitions.currentConfigurationValues.application_version ).first()
-    if not applicationVersion:
+    if not applicationVersionObj:
         logging.warn( 'No version for the application found.  Therefore starting at the beginning with 1.0.0' )
         applicationVersion = '1.0.0'
+    else:
+        applicationVersion = applicationVersionObj.application_version    
 
 ###############
 # Internal configuration
@@ -153,6 +155,45 @@ logging.debug( 'The APP and SERV names are: "' + applicationName + '" and "' + s
 ###################################################################################
 ##### Helper Functions
 ###################################################################################
+def readInSampleIni( iniFileLocation ):
+    """  Read in an INI file and return a dictionary of dictionaries that map the following:
+         ini_file_section -> ini_value -> rest of the line
+         Iterate through that object with the methods .sections() and getitems()
+    """
+    if not os.path.exists( iniFileLocation ):
+        print( 'Unable to open INI file ' + iniFileLocation )
+        sys.exit(3)
+     
+    logging.debug( 'readinSampleIni() with: ' + iniFileLocation )
+    sampleIniFileHandle = open( iniFileLocation , 'r' )
+    #returnDictionary        = { 'dank' : { 'internet' :'memes' } }
+    returnDictionary        = dict()
+    currentSectionInTheFile = None
+    currentFieldName        = None
+    for line in sampleIniFileHandle:
+        # A comment line or whitespace only line
+        if line[0:1] == '#' or line[0:1] == ';' or line.isspace() or line == '\n':
+            pass
+        elif line[0:1] == '[':
+            # have to trim off newline and ]
+            logging.debug( 'Found section ' + line[1:-2] )
+            currentSectionInTheFile = line[1:-2]
+        else: 
+            # So this is a line of a field to be evaluated.  get the value name and then the verification Functions
+            ( fieldName, parsedListOfVerificationFunctions ) = getVariableNameAndVerificationFunctions( line )
+            if currentSectionInTheFile in returnDictionary:
+                returnDictionary[ currentSectionInTheFile ][ fieldName ] = parsedListOfVerificationFunctions 
+            else:
+                tempDictionary = dict()
+                tempDictionary[ fieldName ] = parsedListOfVerificationFunctions 
+                returnDictionary[ currentSectionInTheFile ] = tempDictionary
+                
+    logging.debug( ' =|=|= okay real news: we have a dictionary of dictionaries and it looks like: ' + str( returnDictionary ) )
+    return returnDictionary
+                
+                
+
+
 def readInIniFile( iniFileLocation ):
     """  Read in an INI file and return a configparser object (which is like a namespace object) that has the sections
          Iterate through that object with the methods .sections() and getitems()
@@ -171,6 +212,28 @@ def readInIniFile( iniFileLocation ):
     return iniConfigurationSettings
 
 
+def readInDatabaseConfigurationAsA2dDictionary( applicationName, serverName, version ):
+    """  Get the database version of the configuration , return it as a 2d dictionary 
+        section  ->  fieldname  -> value
+    """
+    logging.debug( 'readInDatabaseConfigurationAsA2dDictionary()' + applicationName + serverName )
+    configurationItemsFromDB = table_definitions.session.query( table_definitions.currentConfigurationValues ).filter( 
+        table_definitions.currentConfigurationValues.server == serverName ).filter( 
+        table_definitions.currentConfigurationValues.application_version == version ).filter( 
+        table_definitions.currentConfigurationValues.application == applicationName ).order_by( 
+        table_definitions.currentConfigurationValues.ini_file_section )
+    returnDictionary = dict()
+    for row in configurationItemsFromDB:
+        if not row.ini_file_section in returnDictionary:
+            #returnDictionary[ row.ini_file_section ] = { row.ini_field_name : row.ini_value }
+            returnDictionary[ row.ini_file_section ] = { row.ini_field_name : row }
+        else: 
+            #returnDictionary[ row.ini_file_section ][ row.ini_field_name ] = row.ini_value
+            returnDictionary[ row.ini_file_section ][ row.ini_field_name ] = row
+    logging.debug( 'so returning: ' + str( returnDictionary ) )
+    return returnDictionary
+
+
 def readInDatabaseConfiguration( applicationName, serverName ):
     """  Get the database version of the configuration , return it as a configparser object """
     configurationItemsFromDB = table_definitions.session.query( table_definitions.currentConfigurationValues ).filter( 
@@ -186,6 +249,14 @@ def readInDatabaseConfiguration( applicationName, serverName ):
     return iniConfigurationSettings 
 
 
+
+def updateeDatabase( listOfSQLAlchemyObjects ):
+    """ Iterate through a list of SQL Alchemy Objects that contain the data """
+    # start by flushing what is already in the DB for the server/app combo
+    #  No, some of these are from the DB so do nothing of the sort!!
+    table_definitions.session.flush()
+    table_definitions.session.add_all( listOfSQLAlchemyObjects )
+    table_definitions.session.commit()
 
 def updateDatabase( applicationName, serverName, finalIniConfig, signals_for_values_that_need_to_be_confirmed ):
     """ Iterate through a config parser object, and update the config manager database with the items inside.  """
@@ -222,6 +293,20 @@ def updateDatabase( applicationName, serverName, finalIniConfig, signals_for_val
     table_definitions.session.add_all( listOfDBConfigsToInsert )
     table_definitions.session.commit()
 
+def getDefaultValueFromDB( application, section, field, version ):
+    defaultValueRow = table_definitions.session.query( table_definitions.applicationDefaultValues ).filter(
+                             table_definitions.applicationDefaultValues.application == applicationName ).filter(
+                             table_definitions.applicationDefaultValues.ini_file_section == section ).filter(
+                             table_definitions.applicationDefaultValues.application_version == version ).filter(
+                             table_definitions.applicationDefaultValues.ini_field_name == field ).first()
+    if defaultValueRow:
+        logging.debug( 'There is a DEFAULT value for: ' + applicationName + '::[' + section + ']::' + field + ' = ' + str( defaultValueRow.ini_value) )
+        return defaultValueRow.ini_value
+    logging.debug( 'No DEFAULT' )
+    return None
+
+
+"""
 def getDefaultValueFromDB( application, section, field):
     defaultValueRow = table_definitions.session.query( table_definitions.applicationDefaultValues ).filter(
                              table_definitions.applicationDefaultValues.application == applicationName ).filter(
@@ -232,6 +317,7 @@ def getDefaultValueFromDB( application, section, field):
         return defaultValueRow.ini_value
     logging.debug( 'No DEFAULT' )
     return None
+"""
 
 
 """ ALPHA, NOT READY YET DO NOT TEST"""
@@ -305,7 +391,6 @@ def getVariableNameAndVerificationFunctions( lineFromTheFile ):
             equationBuffer.append( str( item ) )
             continue
         except ValueError:
-
             # This item is not an integer
             pass
         try:
@@ -314,9 +399,12 @@ def getVariableNameAndVerificationFunctions( lineFromTheFile ):
             if equationBuffer:
                 logging.debug( '     there are other arguments' )
                 if(len(equationBuffer) > (len(inspect.getargspec(eval( item ))[0])-1)):
-                    print("WARNING : Function arguments are more than expected. "+
-                          "Skipping function.")
-                    break
+                    # But what if the function can take any number of arguements?  ie selectFromList then we are fine
+                    if ( inspect.getargspec(eval( item ))[1]) :  #varargs
+                        pass
+                    else:
+                        print("WARNING : Function " + item + " arguments are more than expected. Skipping function.")
+                        break
                 if(len(equationBuffer) < (len(inspect.getargspec(eval( item ))[0])-1)):
                     print("WARNING : Function arguments are less than expected. "+
                           "Skipping function.")
@@ -353,10 +441,11 @@ def main():
         logging.info( 'Going to perform an upgrade' )
         # 1. Read in the current INI file for the running application
         # I think this needs to be picked up another time and compared against the DB results.
-        currentIniFile = application_home_folder + 'etc/' + applicationName + '.ini'
+        currentIniFile = application_home_folder + '/etc/' + applicationName + '.ini'
         if commandLineArguments.inputinifile:
             curentIniFile = commandLineArgments.inputinifile
         logging.debug( 'Going to open the current application ini file which is: ' + currentIniFile )
+        print( 'Going to open the current application ini file which is: ' + currentIniFile )
         currentIniFileConfiguration = None
         if os.path.exists( currentIniFile ):
             currentIniFileConfiguration = readInIniFile( currentIniFile )
@@ -365,89 +454,113 @@ def main():
         # 1.1 Read in iniValuesThatAreManuallySupplied, that was done at the agruments section at the top
         # 2. Read in the INI configuration of the DB
         #databaseCopyOfTheIni = readInDatabaseConfiguration( serverName, applicationName, dbConnectionHandle )
-        databaseCopyOfTheIni = readInDatabaseConfiguration( applicationName, serverName )
+        #databaseCopyOfTheIni = readInDatabaseConfiguration( applicationName, serverName )
+        databaseCopyOfTheIni = readInDatabaseConfigurationAsA2dDictionary( applicationName, serverName, applicationVersion )
 
         # 3. Read in the sample.INI file, iterate through it line by line 
-        templateIniFile = application_home_folder + '/etc/sample.ini' 
-        if not os.path.exists( templateIniFile ):
-            templateIniFile = application_home_folder + '/etc/' + applicationName + '.sample.ini' 
-
+        templateIniFile = None
         if commandLineArguments.templateinifile:
             templateIniFile = commandLineArguments.templateinifile
+        else:
+            templateIniFile = application_home_folder + '/etc/sample.ini' 
+            if not os.path.exists( templateIniFile ):
+                templateIniFile = application_home_folder + '/etc/' + applicationName + '.sample.ini' 
+                if not os.path.exists( templateIniFile ):
+                    print( 'no sir, unable to find sample.ini in ' + application_home_folder )
+                    exit(9) 
         logging.debug( 'Going to open the template / sample ini file: ' + templateIniFile )
-        finalIniConfig = configparser.ConfigParser()
-        finalIniFileOutput = """"""
-        sampleIniFileHandle = open( templateIniFile, 'r' )
-        currentSectionInTheFile = None
-        flag_that_the_item_is_properly_configured = {}
-        ## create a list of SQLAlch objects
-        for line in sampleIniFileHandle:
-            # A comment line or whitespace only line
-            if line[0:1] == '#' or line.isspace() or line == '\n':
-                pass
-            elif line[0:1] == '[':
-                # have to trim off newline and ]
-                logging.debug( 'Found section ' + line[1:-2] )
-                finalIniConfig.add_section( line[1:-2] )
-                currentSectionInTheFile = line[1:-2]
-                finalIniFileOutput = finalIniFileOutput + '\n' + line
-            else:
-                # So this is a line of a field to be evaluated.  First, get the value name and then the verification Functions
-                ( fieldName, parsedListOfVerificationFunctions ) = getVariableNameAndVerificationFunctions( line )
-                logging.debug( ' == fieldname: ' + fieldName + ' and ' + str( parsedListOfVerificationFunctions ) )
 
-                # Now, source of this data ?  
+        #finalIniConfig = configparser.ConfigParser()   #remove me
+        finalIniFileOutput                          = """"""  # still not populated
+        listOfSQLAlchemyObjects                     = []  # table_definitions.currentConfigurationValues
+        currentObjectToInsert                       = None           
+        sampleIniFileDictionary                     = readInSampleIni( templateIniFile )
+        #flag_that_the_item_is_properly_configured   = {}  #remove me
+        ### TODO:  This loop has to go back to opening the file and reading line by line to pass through any documentation
+        ###       from the file that has to go into the next one ie. lines starting with '#' or ';'
+        ###
+        for currentSection, fieldNamesAndVerificationFunctionPairs in sampleIniFileDictionary.items():
+            for fieldName, verificationFunctions in fieldNamesAndVerificationFunctionPairs.items():
+                # Now, find the source of this data
                 value = None
-                try:
-                    value = databaseCopyOfTheIni.get( currentSectionInTheFile, fieldName ) 
-                    logging.debug( 'vvvvvalue comes from the database, (already configured)' )
-                    flag_that_the_item_is_properly_configured[ (currentSectionInTheFile + fieldName).lower() ] = True
-                except:  #NoSectionError = not there
+                try: 
+                    sqlRow = databaseCopyOfTheIni[ currentSection ][ fieldName ]
+                    logging.debug( 'vvvvvalue comes from the database, already configured:::' + str(sqlRow) )
+                    currentObjectToInsert = sqlRow
+                except KeyError:  
                     try:
-                        value = currentIniFileConfiguration.get( currentSectionInTheFile, fieldName)
+                        value = currentIniFileConfiguration.get( currentSection, fieldName)
                         # THERE SHOULD BE A WARNING BECAUSE THE DB does not have it, below is NOT that flag
                         logging.debug( 'vvvvvalue comes from the current configuration, (already configured)' )
-                        flag_that_the_item_is_properly_configured[ (currentSectionInTheFile + fieldName).lower()  ] = True
+                        logging.warn( currentSection + '::' + fieldName + ' is set on the machine, but it is not in the database' )
+                        logging.info( currentSection + '::' + fieldName + ' will be added to the DB' )
+                        currentObjectToInsert = table_definitions.currentConfigurationValues( 
+                            server                  = serverName, 
+                            application             = applicationName,
+                            ini_file_section        = currentSection, 
+                            ini_field_name          = fieldName,
+                            configured_by_user_flag = 't',
+                            application_version     = applicationVersion,
+                            ini_value               = value, 
+                            changed_by_user         = 'tslijboom',
+                            changed_by_timestamp    = time.time() )
+
                     except:
                         # Okay, this has no value in the applications current INI file, or the DB. 
-                        # check if there is a default  -- THIS WILL INCLUDE VERSION LATER
+                        # check if there is a default 
                         logging.debug( 'no Current value or value in the DB, default exists?' )
-                        defaultValue = getDefaultValueFromDB( applicationName, currentSectionInTheFile, fieldName )
-                        if defaultValue is None:
-                            logging.debug( 'Unable to find a value for item (' + fieldName + ') ')
-                            # Value here coudl be the empty string but a valid value for the config,
-                            finalIniConfig.set( currentSectionInTheFile, fieldName, '' )
-                            # Flag that the INI Config is NOT ready to be written - unless forced?
-                            flag_that_the_item_is_properly_configured[ (currentSectionInTheFile + fieldName).lower()  ] = False
-                        else:
-                            # default value could be '' that could be a valid value 
-                            value = defaultValue
+                        defaultValue = getDefaultValueFromDB( applicationName, currentSection, fieldName, applicationVersion )
+                        if not defaultValue is None:
                             logging.debug( 'vvvvvalue comes from the DEFAULT db ' )
-                            flag_that_the_item_is_properly_configured[ (currentSectionInTheFile + fieldName).lower()  ] = True
-
+                            # APPEND TO THE LIST, NO NEED TO VERIFY ASSUMED IT IS OKAY
+                            currentObjectToInsert = table_definitions.currentConfigurationValues( 
+                                server                  = serverName, 
+                                application             = applicationName,
+                                ini_file_section        = currentSection, 
+                                ini_field_name          = fieldName,
+                                configured_by_user_flag = 't',
+                                application_version     = applicationVersion,
+                                ini_value               = defaultValue, 
+                                changed_by_user         = 'tslijboom',
+                                changed_by_timestamp    = time.time() )
+                        else:
+                            currentObjectToInsert = table_definitions.currentConfigurationValues( 
+                                server                  = serverName, 
+                                application             = applicationName,
+                                ini_file_section        = currentSection, 
+                                ini_field_name          = fieldName,
+                                configured_by_user_flag = 't',
+                                application_version     = applicationVersion,
+                                ini_value               = defaultValue, 
+                                changed_by_user         = 'tslijboom',
+                                changed_by_timestamp    = time.time() )
+                         
             
-                logging.debug( currentSectionInTheFile + '::' + fieldName + ' with value "' + str( value ) + '"' )
-                if testConfigValueAgainstFunctions( value, parsedListOfVerificationFunctions ):
-                    logging.debug( 'Passed sample.ini field restrictions' )
-                    if value == None:
-                        value = ''
-                    finalIniConfig.set( currentSectionInTheFile, fieldName, value )
+                logging.debug( currentSection + '::' + fieldName + ' with value "' + str( value ) + '"' )
+                # now we have a value, test it against the functions listed in the sample ini file
+
+                if currentObjectToInsert.ini_value == None or currentObjectToInsert.ini_value == '':
+                    currentObjectToInsert.ini_value = ''
+                    if 'canBeNull' in str( verificationFunctions ):
+                        currentObjectToInsert.configured_by_user_flag = 't'
+                        listOfSQLAlchemyObjects.append( currentObjectToInsert )
+                    else:
+                        currentObjectToInsert.configured_by_user_flag = 'f'
+                        listOfSQLAlchemyObjects.append( currentObjectToInsert )
+                elif testConfigValueAgainstFunctions( currentObjectToInsert.ini_value, verificationFunctions ):
+                    logging.info( 'Passed sample.ini field restrictions' )
+                    currentObjectToInsert.configured_by_user_flag = 't'
+                    listOfSQLAlchemyObjects.append( currentObjectToInsert )
                 else:
                     logging.debug( 'Failed sample.ini field restrictions' )
-                    if value == None:
-                        value = ''
-                    finalIniConfig.set( currentSectionInTheFile, fieldName, value )
-                    # Need to write the item as NOT CONFIGURED FAILED TO CONFIGURE
+                    currentObjectToInsert.configured_by_user_flag = 'f'
+                    listOfSQLAlchemyObjects.append( currentObjectToInsert )
 
-
-        sampleIniFileHandle.close()
-
-        # Now, is the final INI section fill?  Valid?  Can the final INI be written?
 
         # 5. Update the DB with the current running INI
-        logging.debug( 'Okay so the FINAL ini configparser object is: ' + str( finalIniConfig ) )
-        logging.debug( 'And the hash is: ' + str( flag_that_the_item_is_properly_configured ) )
-        updateDatabase( applicationName, serverName, finalIniConfig, flag_that_the_item_is_properly_configured )
+        logging.debug( 'All configuration items have been iterated through' )
+        #updateDatabase( applicationName, serverName, finalIniConfig, flag_that_the_item_is_properly_configured )
+        updateeDatabase( listOfSQLAlchemyObjects )
 
         # 4.5 write the final INI file
         finalIniFileDestination = applicationName.replace( 'bin', '' ) + '/etc/' + applicationName + '.ini' 

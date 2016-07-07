@@ -1,12 +1,12 @@
 # ####################################################################
 # 
-#    CONFIG_MANAGER.PY
+#    CONFIG_MANAGER_LIB.PY
 #
 #    > Support: Tyler Slijboom
 #    > Company: Blackberry
 #    > Contact: tslijboom@juniper.net
-#    > Version: 0.2.8
-#    > Revision Date: field will have to remain completely emptu:015-06-16
+#    > Version: 0.4.2
+#    > Revision Date: 20160705 
 #       
 # ####################################################################
 # ----------[ IMPORTS ]----------
@@ -29,6 +29,7 @@ from socket import gethostname
 
 def isAnIPAddress( testValue ):
     """  The value must be an IPv4 or IPv6 address  """
+    print( 'isAnIPAddress( "' + testValue + '" )' )
     if testValue == 'localhost':
         return True
     try:
@@ -83,6 +84,7 @@ def inRange( testValue, minimumValue, maximumValue ):
 
 def selectFromList( testValue, *listOfAcceptableValues ):
     """ The value must be one of: {{ listOfValues }} """
+    print( 'checking if ' + testValue + ' is in one of: ' + str( listOfAcceptableValues ) )
     if testValue in listOfAcceptableValues:
         return True
     return False 
