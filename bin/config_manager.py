@@ -26,131 +26,7 @@ import inspect
 from socket import gethostname
 from config_manager_lib import *
 
-###################################################################################
-##### Script setup, arguments, configuration file, db connection and logging
-##### Declare Local Variables
-###################################################################################
-###############
-# command line arguments
-argumentsParser = argparse.ArgumentParser( description='Manage application configurations without editing code' )
-argumentsParser.add_argument( '-a', dest='applicationname', help='The Applicationname when update/insert/select from the DB' )
-argumentsParser.add_argument( '-c', dest='configurationFile', action='store', help='Use this as the configuration file for this script' )
-argumentsParser.add_argument( '-d', dest='localconfigurationdictionary', action='store',
-                                help='INI file that contains values to be inserted into the final.ini file' )
-argumentsParser.add_argument( '-i', dest='inputinifile', help='The current INI file of the application to be upgraded.  Only used for upgrades.' )
-argumentsParser.add_argument( '-m', dest='action', action='store', default='upgrade',
-                                help='Mode, can be one of (i)nstall, (u)pgrade, (v)erify note: install is default')
-argumentsParser.add_argument( '-o', dest='outputinifile', help='The file to output the final INI file to' )
-argumentsParser.add_argument( '-v', dest='version', help='The version of the application that you are managing' )
-argumentsParser.add_argument( '-s', dest='servername', help='The Machine name when update/insert/select from the DB' )
-argumentsParser.add_argument( '-t', dest='templateinifile', help='The template INI file used as the base for the application ini file.  Often referred to as sample.ini' )
-argumentsParser.add_argument( '-f', dest='homefolder', action='store', help='This is the root folder for all application files.  It is assumed that etc/ exists in here' )
-argumentsParser.add_argument( '--test', action='store' )
-
-commandLineArguments = argumentsParser.parse_args()
-
-# Convert short-hands to full name, and check only valid values are used
-if commandLineArguments.action == 'u' or commandLineArguments.action == 'upgrade':
-    commandLineArguments.action = 'upgrade'
-elif commandLineArguments.action == 'i' or commandLineArguments.action == 'install':
-    commandLineArguments.action = 'install'
-elif commandLineArguments.action == 'v' or commandLineArguments.action == 'verify':
-    commandLineArguments.action = 'verify'
-elif commandLineArguments.action == 's' or commandLineArguments.action == 'sync':
-    commandLineArguments.action = 'sync'
-elif commandLineArguments.action == 'd' or commandLineArguments.action == 'setdefaults':
-    commandLineArguments.action = 'setdefaults'
-else:
-    print( 'Mode value passed is not valid' )
-    argumentsParser.print_help()
-    sys.exit(1)
-
-
-###############
-# Local Variables
-
-# This value is just a set of key/values that will be used when creating the final.ini file.  The keys will match
-#   THe names used in the ini file.  THE ini file section will match as well!
-iniValuesThatAreManuallySupplied = configparser.ConfigParser()
-if commandLineArguments.localconfigurationdictionary:
-    try:
-        iniValuesThatAreManuallySupplied.read( commandLineArguments.localconfigurationdictionary )
-    except:
-        print( 'Failed to open file: ' + commandLineArguments.localconfigurationdictionary )
-        sys.exit( 2 )
-
-serverName = str(os.uname().nodename)
-if commandLineArguments.servername:
-    serverName = str(commandLineArguments.servername)
-
-#parse the application name from the CWD :  /home/WE_WANT_THIS_PART
-if commandLineArguments.applicationname:
-    applicationName = str(commandLineArguments.applicationname)
-elif commandLineArguments.homefolder:
-    try:
-        applicationName = commandlineArguments.homefolder.split( '/' )[2]
-    except:
-        print( 'Failed to get the application name from ' + commandLineArguments.homefolder )
-else:
-    try:
-        applicationName = os.getcwd().split( '/' )[2]
-    except:
-        print( 'Failed to get the application name from CWD' )
-
-# this is the basis for finding files on the system, of the format /home/<applicationname> but can be other.
-#  Assuming that /etc exsits in that folder with relevant files.
-application_home_folder = None
-if commandLineArguments.homefolder:
-    application_home_folder = commandLineArguments.homefolder
-    logging.debug( '  -1-1-1-1-1 the character is: ' + application_home_folder[:-1] )
-    if application_home_folder[:-1] != '/': 
-        application_home_folder = application_home_folder + '/'
-    application_home_folder = commandLineArguments.homefolder
-else:
-    application_home_folder = '/home/' + applicationName + '/'
-
-applicationVersion = None
-if commandLineArguments.version:
-    applicationVersion = commandLineArguments.version
-else:
-    applicationVersionObj = table_definitions.session.query( table_definitions.currentConfigurationValues ).filter( 
-        table_definitions.currentConfigurationValues.server == serverName ).filter( 
-        table_definitions.currentConfigurationValues.application == applicationName ).order_by( 
-        table_definitions.currentConfigurationValues.application_version ).first()
-    if not applicationVersionObj:
-        logging.warn( 'No version for the application found.  Therefore starting at the beginning with 1.0.0' )
-        applicationVersion = '1.0.0'
-    else:
-        applicationVersion = applicationVersionObj.application_version    
-
-###############
-# Internal configuration
-configurationFile = os.getcwd().replace( 'bin', 'etc' ) + '/' + __file__.replace( '.py', '.ini' )
-if ( commandLineArguments.configurationFile ):
-    configurationFile = commandLineArguments.configurationFile
-
-if ( not os.path.exists( configurationFile ) ):
-    print( 'Unable to open configuration file: ' + configurationFile )
-
-applicationConfiguration = configparser.ConfigParser()
-applicationConfiguration.read( configurationFile )
-
-###############
-# Logging
-logging.basicConfig(    filename = applicationConfiguration.get( 'logging', 'destinationFile' ),
-                        level    = applicationConfiguration.get( 'logging', 'level' )
-                        )
-logging.info( '################################################################' )
-logging.info( 'Script Starting, running in mode: ' + commandLineArguments.action )
-if commandLineArguments.servername:
-        logging.debug( 'script servername is: ' + commandLineArguments.servername )
-logging.debug( 'using the configuration file: ' + configurationFile )
-logging.debug( 'The APP and SERV names are: "' + applicationName + '" and "' + serverName + '" respectively' )
-
-
-###############
-# The DB connection
-# See table_definitions.py
+logging.basicConfig( level = logging.DEBUG )
 
 ###################################################################################
 ##### Helper Functions
@@ -437,6 +313,132 @@ def getVariableNameAndVerificationFunctions( lineFromTheFile ):
 ###################################################################################
 
 def main():
+    ###################################################################################
+    ##### Script setup, arguments, configuration file, db connection and logging
+    ##### Declare Local Variables
+    ###################################################################################
+    ###############
+    # command line arguments
+    argumentsParser = argparse.ArgumentParser( description='Manage application configurations without editing code' )
+    argumentsParser.add_argument( '-a', dest='applicationname', help='The Applicationname when update/insert/select from the DB' )
+    argumentsParser.add_argument( '-c', dest='configurationFile', action='store', help='Use this as the configuration file for this script' )
+    argumentsParser.add_argument( '-d', dest='localconfigurationdictionary', action='store',
+                                    help='INI file that contains values to be inserted into the final.ini file' )
+    argumentsParser.add_argument( '-i', dest='inputinifile', help='The current INI file of the application to be upgraded.  Only used for upgrades.' )
+    argumentsParser.add_argument( '-m', dest='action', action='store', default='upgrade',
+                                    help='Mode, can be one of (i)nstall, (u)pgrade, (v)erify note: install is default')
+    argumentsParser.add_argument( '-o', dest='outputinifile', help='The file to output the final INI file to' )
+    argumentsParser.add_argument( '-v', dest='version', help='The version of the application that you are managing' )
+    argumentsParser.add_argument( '-s', dest='servername', help='The Machine name when update/insert/select from the DB' )
+    argumentsParser.add_argument( '-t', dest='templateinifile', help='The template INI file used as the base for the application ini file.  Often referred to as sample.ini' )
+    argumentsParser.add_argument( '-f', dest='homefolder', action='store', help='This is the root folder for all application files.  It is assumed that etc/ exists in here' )
+    argumentsParser.add_argument( '--test', action='store' )
+
+    commandLineArguments = argumentsParser.parse_args()
+
+    # Convert short-hands to full name, and check only valid values are used
+    if commandLineArguments.action == 'u' or commandLineArguments.action == 'upgrade':
+        commandLineArguments.action = 'upgrade'
+    elif commandLineArguments.action == 'i' or commandLineArguments.action == 'install':
+        commandLineArguments.action = 'install'
+    elif commandLineArguments.action == 'v' or commandLineArguments.action == 'verify':
+        commandLineArguments.action = 'verify'
+    elif commandLineArguments.action == 's' or commandLineArguments.action == 'sync':
+        commandLineArguments.action = 'sync'
+    elif commandLineArguments.action == 'd' or commandLineArguments.action == 'setdefaults':
+        commandLineArguments.action = 'setdefaults'
+    else:
+        print( 'Mode value passed is not valid' )
+        argumentsParser.print_help()
+        sys.exit(1)
+
+
+    ###############
+    # Local Variables
+
+    # This value is just a set of key/values that will be used when creating the final.ini file.  The keys will match
+    #   THe names used in the ini file.  THE ini file section will match as well!
+    iniValuesThatAreManuallySupplied = configparser.ConfigParser()
+    if commandLineArguments.localconfigurationdictionary:
+        try:
+            iniValuesThatAreManuallySupplied.read( commandLineArguments.localconfigurationdictionary )
+        except:
+            print( 'Failed to open file: ' + commandLineArguments.localconfigurationdictionary )
+            sys.exit( 2 )
+
+    serverName = str(os.uname().nodename)
+    if commandLineArguments.servername:
+        serverName = str(commandLineArguments.servername)
+    
+    #parse the application name from the CWD :  /home/WE_WANT_THIS_PART
+    if commandLineArguments.applicationname:
+        applicationName = str(commandLineArguments.applicationname)
+    elif commandLineArguments.homefolder:
+        try:
+            applicationName = commandlineArguments.homefolder.split( '/' )[2]
+        except:
+            print( 'Failed to get the application name from ' + commandLineArguments.homefolder )
+    else:
+        try:
+            applicationName = os.getcwd().split( '/' )[2]
+        except:
+            print( 'Failed to get the application name from CWD' )
+    
+    # this is the basis for finding files on the system, of the format /home/<applicationname> but can be other.
+    #  Assuming that /etc exsits in that folder with relevant files.
+    application_home_folder = None
+    if commandLineArguments.homefolder:
+        application_home_folder = commandLineArguments.homefolder
+        logging.debug( '  -1-1-1-1-1 the character is: ' + application_home_folder[:-1] )
+        if application_home_folder[:-1] != '/': 
+            application_home_folder = application_home_folder + '/'
+        application_home_folder = commandLineArguments.homefolder
+    else:
+        application_home_folder = '/home/' + applicationName + '/'
+
+    applicationVersion = None
+    if commandLineArguments.version:
+        applicationVersion = commandLineArguments.version
+    else:
+        applicationVersionObj = table_definitions.session.query( table_definitions.currentConfigurationValues ).filter( 
+            table_definitions.currentConfigurationValues.server == serverName ).filter( 
+            table_definitions.currentConfigurationValues.application == applicationName ).order_by( 
+            table_definitions.currentConfigurationValues.application_version ).first()
+        if not applicationVersionObj:
+            logging.warn( 'No version for the application found.  Therefore starting at the beginning with 1.0.0' )
+            applicationVersion = '1.0.0'
+        else:
+            applicationVersion = applicationVersionObj.application_version    
+
+    ###############
+    # Internal configuration
+    configurationFile = os.getcwd().replace( 'bin', 'etc' ) + '/' + __file__.replace( '.py', '.ini' )
+    if ( commandLineArguments.configurationFile ):
+        configurationFile = commandLineArguments.configurationFile
+
+    if ( not os.path.exists( configurationFile ) ):
+        print( 'Unable to open configuration file: ' + configurationFile )
+
+    applicationConfiguration = configparser.ConfigParser()
+    applicationConfiguration.read( configurationFile )
+
+    ###############
+    # Logging
+    logging.basicConfig(    filename = applicationConfiguration.get( 'logging', 'destinationFile' ),
+                        level    = applicationConfiguration.get( 'logging', 'level' )
+                        )
+    logging.info( '################################################################' )
+    logging.info( 'Script Starting, running in mode: ' + commandLineArguments.action )
+    if commandLineArguments.servername:
+            logging.debug( 'script servername is: ' + commandLineArguments.servername )
+    logging.debug( 'using the configuration file: ' + configurationFile )
+    logging.debug( 'The APP and SERV names are: "' + applicationName + '" and "' + serverName + '" respectively' )
+
+
+    ###############
+    # The DB connection
+    # See table_definitions.py
+
     if commandLineArguments.action == 'upgrade':
         logging.info( 'Going to perform an upgrade' )
         # 1. Read in the current INI file for the running application
