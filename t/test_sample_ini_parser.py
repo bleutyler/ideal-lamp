@@ -5,8 +5,8 @@ import ipaddress
 # Module for the method to work
 
 sys.path.append( '/home/tslijboom/tools--config-manager-ini/bin' )
-from config_manager_lib import getVariableNameAndVerificationFunctions
-from config_manager_lib import testConfigValueAgainstFunctions
+from config_manager import getVariableNameAndVerificationFunctions
+from config_manager import testConfigValueAgainstFunctions
 
 class configParserTest( unittest.TestCase ):
     def test_a_valid_string( self ):
@@ -64,4 +64,4 @@ for item in dir( cpt ):
     if item[ :5 ] == 'test_':
         print( item )
         method_to_run = getattr( cpt, item )
-        mthod_to_run()
+        method_to_run()
