@@ -1,0 +1,16 @@
+TESTS for the script on the use case of an installation:
+Can it read an ini file and convert that to the application INI file?
+# can it read a new value from the command line and insert it into a config file?
+can it read a value from a previous config file and put that into the new config file?
+can it read a value from the DB and put it into the file?
+
+DB seleect tests:
+can it pull the current version of the config file?
+can it pull  a previous version of the config file?
+can it save a comment when a custom value is inserted
+
+DB write tests:
+Can it write to the DB?  
+can it store a comment?  Does it store all data correctly?
+Is a historical entry made?
+

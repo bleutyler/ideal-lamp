@@ -92,3 +92,12 @@ def selectFromList( testValue, *listOfAcceptableValues ):
 def canBeNull( testValue ):
     """ This value can be empty """
     return True
+
+def isAnEmailAddress( testValue ):
+    """ The value must be an email address """
+    testValue = str(testValue)
+    testValue_is_valid = re.compile("^[a-zA-Z0-9-@]*$")
+    if testValue_is_valid.search(testValue) is not None:
+        return True
+    else:
+        return False

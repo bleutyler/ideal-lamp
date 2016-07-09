@@ -26,7 +26,7 @@ import inspect
 from socket import gethostname
 from config_manager_lib import *
 
-logging.basicConfig( level = logging.DEBUG )
+logging.basicConfig( level = logging.INFO)
 
 ###################################################################################
 ##### Helper Functions
@@ -369,7 +369,7 @@ def main():
     serverName = str(os.uname().nodename)
     if commandLineArguments.servername:
         serverName = str(commandLineArguments.servername)
-    
+
     #parse the application name from the CWD :  /home/WE_WANT_THIS_PART
     if commandLineArguments.applicationname:
         applicationName = str(commandLineArguments.applicationname)
@@ -383,7 +383,7 @@ def main():
             applicationName = os.getcwd().split( '/' )[2]
         except:
             print( 'Failed to get the application name from CWD' )
-    
+
     # this is the basis for finding files on the system, of the format /home/<applicationname> but can be other.
     #  Assuming that /etc exsits in that folder with relevant files.
     application_home_folder = None
