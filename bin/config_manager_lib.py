@@ -58,7 +58,7 @@ def isAlphaNumericString( testValue ):
     """  The value must be made up of letters and/or digits """
 
     testValue = str(testValue)
-    testValue_is_valid = re.compile("^[a-zA-Z0-9,-\/* ]*$")
+    testValue_is_valid = re.compile("^[a-zA-Z0-9,-\/* \"# ]*$")
     if testValue_is_valid.search(testValue) is not None:
         return True
     else:
