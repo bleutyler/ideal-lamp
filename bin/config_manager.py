@@ -322,6 +322,7 @@ def main():
     argumentsParser = argparse.ArgumentParser( description='Manage application configurations without editing code' )
     argumentsParser.add_argument( '-a', dest='applicationname', help='The Applicationname when update/insert/select from the DB' )
     argumentsParser.add_argument( '-c', dest='configurationFile', action='store', help='Use this as the configuration file for this script' )
+    # This is not used
     argumentsParser.add_argument( '-d', dest='localconfigurationdictionary', action='store',
                                     help='INI file that contains values to be inserted into the final.ini file' )
     argumentsParser.add_argument( '-i', dest='inputinifile', help='The current INI file of the application to be upgraded.  Only used for upgrades.' )

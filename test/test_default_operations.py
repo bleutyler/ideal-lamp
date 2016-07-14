@@ -14,6 +14,7 @@ class DefaultApplicationTester( unittest.TestCase ):
     app_homefolder  = '/home/bleutyler/ini_test_area/defaultTester'
     user            = 'testClass'
     section         = 'hpna'
+    test_configuration_file = '/home/tslijboom/git/tools--ini-config-manager/test/config_manager_tester.ini'
 
     @classmethod
     def setup_class( cls ):
@@ -47,7 +48,11 @@ class DefaultApplicationTester( unittest.TestCase ):
                         table_definitions.session.delete( row )
 
     def test_adding_new_default( self ):
-        print( 'hey I got a ' + str( self ) )
-        version = '1.2.0'
-        command_arguments_to_run = '-a ' + self.application + '-c /home/tslijboom/git/tools--ini-config-manager/test/config_manager_tester.ini -s ' + self.server +
-            '
+        # SHOULD DEFAULT TO VERSION 1.0.0
+        input_file      = 'input_files/default_setting_v.1.0.0.ini'
+        template_file   = 'input_files/default_setting_v.1.0.0.ini'
+        command_arguments_list   = ( '-a', self.application, '-c', self.test_configuration_file, '-m set_defaults',
+                                    '-s', self.server, '-i', input_file, '-t', template_file )
+        with unittest.mock.patch( 'sys.argv', command_arguments_list ):
+            #now do the test
+            config_manager.main()
