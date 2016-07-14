@@ -110,6 +110,7 @@ def readInDatabaseConfigurationAsA2dDictionary( applicationName, serverName, ver
     return returnDictionary
 
 
+## DEPRECATED
 def readInDatabaseConfiguration( applicationName, serverName ):
     """  Get the database version of the configuration , return it as a configparser object """
     configurationItemsFromDB = table_definitions.session.query( table_definitions.currentConfigurationValues ).filter( 
@@ -335,7 +336,7 @@ def main():
     argumentsParser.add_argument( '-f', dest='homefolder', action='store', help='This is the root folder for all application files.  It is assumed that etc/ exists in here' )
     argumentsParser.add_argument( '--test', action='store' )
 
-    commandLineArguments = argumentsParser.parse_args()
+    commandLineArguments = argumentsParser.parse_args( sys.argv )
 
     # Convert short-hands to full name, and check only valid values are used
     if commandLineArguments.action == 'u' or commandLineArguments.action == 'upgrade':
@@ -446,7 +447,7 @@ def main():
         # I think this needs to be picked up another time and compared against the DB results.
         currentIniFile = application_home_folder + '/etc/' + applicationName + '.ini'
         if commandLineArguments.inputinifile:
-            curentIniFile = commandLineArgments.inputinifile
+            curentIniFile = commandLineArguments.inputinifile
         logging.debug( 'Going to open the current application ini file which is: ' + currentIniFile )
         print( 'Going to open the current application ini file which is: ' + currentIniFile )
         currentIniFileConfiguration = None
@@ -588,7 +589,7 @@ def main():
         # 1. Read in the current INI file for the running application
         currentIniFile = applicationName.replace( 'bin', 'etc' ) + '/old_application_configuration.ini'
         if commandLineArguments.inputinifile:
-            curentIniFile = commandLineArgments.inputinifile
+            curentIniFile = commandLineArguments.inputinifile
         logging.debug( 'Going to open the current application ini file which is: ' + currentIniFile )
         try:
             currentIniFileConfiguration = readInIniFile( currentIniFile )
@@ -600,7 +601,7 @@ def main():
         # 5. Update the DB with the current running INI
         currentIniFile = application_home_folder + '/etc/' + applicationName + '.ini'
         if commandLineArguments.inputinifile:
-            curentIniFile = commandLineArgments.inputinifile
+            currentIniFile = commandLineArguments.inputinifile
         logging.debug( 'Going to open the current application ini file which is: ' + currentIniFile )
         try:
             currentIniFileConfiguration = readInIniFile( currentIniFile )
@@ -613,12 +614,21 @@ def main():
             for configItem in currentIniFileConfiguration.items( sectionName ):
                 itemField = configItem[0]
                 itemValue = configItem[1]
-                newDefaultRow = table_definitions.applicationDefaultValues( application = applicationName,
+                currentDefaultRow = table_definitions.session.query( table_definitions.applicationDefaultValues ).filter(
+                    table_definitions.applicationDefaultValues.application == applicationName ).filter(
+                    table_definitions.applicationDefaultValues.ini_file_section == sectionName ).filter(
+                    table_definitions.applicationDefaultValues.application_version == applicationVersion ).filter(
+                    table_definitions.applicationDefaultValues.ini_field_name == itemField ).first()
+ 
+                if currentDefaultRow:
+                    listOfConfigurationItems.append( currentDefaultRow )
+                else:
+                    newDefaultRow = table_definitions.applicationDefaultValues( application = applicationName,
                                                         ini_file_section = sectionName, ini_field_name = itemField, 
                                                         application_version = applicationVersion,
                                                         ini_value = itemValue, changed_by_user = 'tslijboom', 
                                                         changed_by_timestamp = time.time() )
-            listOfConfigurationItems.append( newDefaultRow )
+                    listOfConfigurationItems.append( newDefaultRow )
     
         table_definitions.session.add_all( listOfConfigurationItems )
         table_definitions.session.commit()
@@ -628,7 +638,7 @@ def main():
         # 5. Update the DB with the current running INI
         currentIniFile = application_home_folder + '/etc/' + applicationName + '.ini'
         if commandLineArguments.inputinifile:
-            curentIniFile = commandLineArgments.inputinifile
+            curentIniFile = commandLineArguments.inputinifile
         logging.debug( 'Going to open the current application ini file which is: ' + currentIniFile )
         try:
             currentIniFileConfiguration = readInIniFile( currentIniFile )

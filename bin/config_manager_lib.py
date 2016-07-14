@@ -13,7 +13,6 @@
 import logging
 import ipaddress
 import time
-import argparse
 import configparser
 import os
 import sys
