@@ -640,13 +640,78 @@ def main():
         if commandLineArguments.inputinifile:
             curentIniFile = commandLineArguments.inputinifile
         logging.debug( 'Going to open the current application ini file which is: ' + currentIniFile )
+        listOfConfigurationItemsForTheDB = []
+        listOfConfigurationItemsToDeleteFromTheDB = []
+        configParserOfItemsMissingFromTheDB = []
         try:
             currentIniFileConfiguration = readInIniFile( currentIniFile )
+
+            #########
+            # Does the item already exist is the DB?
+            testForApplicationInTheDB = table_definitions.session.query( table_definitions.currentConfigurationValues ).filter(
+                table_defintions.currentConfigurationValues.application         == applicationName ).filter(
+                table_defintions.currentConfigurationValues.application_version == applicationVersion ).filter(
+                table_defintions.currentConfigurationValues.server              == serverName ).order_by(
+                table_defintions.currentConfigurationValues.ini_file_section ).all()
+
+            if testForApplicationInTheDB:
+                ## We have to update these items and update the DB
+                # iterate through the B items and update them as needed.
+                configurationItemsFound = new configparser()
+                for dbItem in testForApplicationInTheDB:
+                    # find the item in the current confitg
+                    try: 
+                        fileValue = currentIniFileConfiguration.get( dbItem.ini_file_section, dbItem.ini_field_name )
+                        if ( fileValue != dbItem.ini_value ):
+                            dbItem.ini_value = fileValue
+                            listOfConfiguratinItemsForTheDB.add( dbItem )
+                            if not ( configurationItemsFound.has_section( dbItem.ini_file_section ):
+                                configurationItemsFound.add_section( dbItem.ini_file_section )
+                            configurationItemsFound.set( dbItem.ini_file_section, dbItem.ini_field_name, dbItem.ini_value )
+                        else:
+                            # No change, so do nothing
+                            pass
+                    except:
+                        # NoSectionError or NoIndex error, which means the DB has a vlue that the current file does not.  
+                        logging.warn( 'DB contains an item that is not in the file.    Removing it.  Section: ' + dbItem.ini_file_section + ' FieldName: ' 
+                            + dbItem.ini_field_name + ' Value: ' + dbItem.ini_value )
+                        listOfConfigurationItemsToDeleteFromTheDB.add( dbItem )
+                
+                # Now that we iterated through the DB items found, we have to check for ConfigIniItems that were not in the DB
+                for sectionName in currentIniFileConfiguration.sections():
+                    for field in currentIniFileConfiguration.items( sectionName ):
+                        if configurationItemsFound.has_option( sectionName, field ):
+                            pass
+                        else:
+                            newConfigurationRow = table_definitions.currentConfigurationValues( application = applicationName,
+                                ini_file_section = sectionName, ini_field_name = field,
+                                application_version = applicationVersion,
+                                ini_value = configurationItemsFound.get( sectionName, field ),
+                                changed_by_user = 'tslijboom', changed_by_timestamp = time.time() )
+                            listOfConfigurationItemsForTheDB.append( newConfigurationRow )
+
+
+            else:
+                ## No current entries in the DB, so just add new SQLAlchemy objects to insert them
+                for sectionName in currentIniFileConfiguration.sections():
+                    for configItem in currentIniFileConfiguration.items( sectionName ):
+                        itemField = configItem[0]
+                        itemValue = configItem[1]
+                        newConfigurationRow = table_definitions.currentConfigurationValues( application = applicationName,
+                                                                                ini_file_section = sectionName, ini_field_name = itemField, 
+                                                                                application_version = applicationVersion,
+                                                                                ini_value = itemValue, changed_by_user = 'tslijboom', 
+                                                                                changed_by_timestamp = time.time() )
+                        listOfConfigurationItemsForTheDB.append( newConfigurationRow )
+    
+
         except:
             print( 'Failed to read in config file ' + currentIniFile )
             sys.exit( 7 )
 
-        updateDatabase( applicationName, serverName, currentIniFileConfiguration, {} )
+        # This is either updating or inserting to the DB.
+        table_definitions.session.add_all( listOfConfigurationItemsForTheDB )
+        table_definitions.session.commit()
 
 # If run from the command line, we need: (argparse)
 # username for changes example: (tslijboom)
