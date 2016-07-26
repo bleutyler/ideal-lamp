@@ -42,7 +42,7 @@ class SyncCommandTest( unittest.TestCase ):
 
         #############
         # run the command
-        command_arguments_list   = [ '-a', self.application, '-c', self.test_configuration_file, '-m', 'sync',
+        command_arguments_list   = [ '-a', self.application, '-c', self.test_configuration_file, '-m', 'sync', '-v', self.version,
                                     '-s', self.server, '-i', ini_file_with_values, '-t', self.sync_application_template_file ]
         with unittest.mock.patch( 'sys.argv', command_arguments_list ):
             print( 'testing with: ' + str( command_arguments_list ) )

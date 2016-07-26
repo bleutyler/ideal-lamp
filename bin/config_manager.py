@@ -5,8 +5,8 @@
 #    > Support: Tyler Slijboom
 #    > Company: Blackberry
 #    > Contact: tslijboom@juniper.net
-#    > Version: 0.3.2
-#    > Revision Date: 2016-06-22
+#    > Version: 0.4.2
+#    > Revision Date: 2016-07-22
 #       
 # ####################################################################
 # ----------[ IMPORTS ]----------
@@ -638,7 +638,7 @@ def main():
         # 5. Update the DB with the current running INI
         currentIniFile = application_home_folder + '/etc/' + applicationName + '.ini'
         if commandLineArguments.inputinifile:
-            curentIniFile = commandLineArguments.inputinifile
+            currentIniFile = commandLineArguments.inputinifile
         logging.debug( 'Going to open the current application ini file which is: ' + currentIniFile )
         listOfConfigurationItemsForTheDB = []
         listOfConfigurationItemsToDeleteFromTheDB = []
@@ -649,15 +649,15 @@ def main():
             #########
             # Does the item already exist is the DB?
             testForApplicationInTheDB = table_definitions.session.query( table_definitions.currentConfigurationValues ).filter(
-                table_defintions.currentConfigurationValues.application         == applicationName ).filter(
-                table_defintions.currentConfigurationValues.application_version == applicationVersion ).filter(
-                table_defintions.currentConfigurationValues.server              == serverName ).order_by(
-                table_defintions.currentConfigurationValues.ini_file_section ).all()
+                table_definitions.currentConfigurationValues.application         == applicationName ).filter(
+                table_definitions.currentConfigurationValues.application_version == applicationVersion ).filter(
+                table_definitions.currentConfigurationValues.server              == serverName ).order_by(
+                table_definitions.currentConfigurationValues.ini_file_section ).all()
 
             if testForApplicationInTheDB:
                 ## We have to update these items and update the DB
                 # iterate through the B items and update them as needed.
-                configurationItemsFound = new configparser()
+                configurationItemsFound = configparser.ConfigParser()
                 for dbItem in testForApplicationInTheDB:
                     # find the item in the current confitg
                     try: 
@@ -665,7 +665,7 @@ def main():
                         if ( fileValue != dbItem.ini_value ):
                             dbItem.ini_value = fileValue
                             listOfConfiguratinItemsForTheDB.add( dbItem )
-                            if not ( configurationItemsFound.has_section( dbItem.ini_file_section ):
+                            if not configurationItemsFound.has_section( dbItem.ini_file_section ):
                                 configurationItemsFound.add_section( dbItem.ini_file_section )
                             configurationItemsFound.set( dbItem.ini_file_section, dbItem.ini_field_name, dbItem.ini_value )
                         else:
@@ -685,7 +685,7 @@ def main():
                         else:
                             newConfigurationRow = table_definitions.currentConfigurationValues( application = applicationName,
                                 ini_file_section = sectionName, ini_field_name = field,
-                                application_version = applicationVersion,
+                                application_version = applicationVersion, server = serverName,
                                 ini_value = configurationItemsFound.get( sectionName, field ),
                                 changed_by_user = 'tslijboom', changed_by_timestamp = time.time() )
                             listOfConfigurationItemsForTheDB.append( newConfigurationRow )
@@ -699,14 +699,17 @@ def main():
                         itemValue = configItem[1]
                         newConfigurationRow = table_definitions.currentConfigurationValues( application = applicationName,
                                                                                 ini_file_section = sectionName, ini_field_name = itemField, 
-                                                                                application_version = applicationVersion,
+                                                                                application_version = applicationVersion, server = serverName,
                                                                                 ini_value = itemValue, changed_by_user = 'tslijboom', 
+                                                                                configured_by_user_flag = True,
                                                                                 changed_by_timestamp = time.time() )
                         listOfConfigurationItemsForTheDB.append( newConfigurationRow )
     
 
-        except:
-            print( 'Failed to read in config file ' + currentIniFile )
+        except Exception as e:
+            #error = sys.exc_info()[0]
+            #print( 'Failed to read in config file ' + currentIniFile )
+            print( ':::' + str(e) )
             sys.exit( 7 )
 
         # This is either updating or inserting to the DB.
