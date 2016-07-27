@@ -661,12 +661,15 @@ def main():
                 for dbItem in testForApplicationInTheDB:
                     # find the item in the current confitg
                     try: 
+                        print( ' Iam llooking for the value of ' + dbItem.ini_file_section + '::' + dbItem.ini_field_name )
                         fileValue = currentIniFileConfiguration.get( dbItem.ini_file_section, dbItem.ini_field_name )
                         if ( fileValue != dbItem.ini_value ):
                             dbItem.ini_value = fileValue
-                            listOfConfiguratinItemsForTheDB.add( dbItem )
+                            listOfConfiguratinItemsForTheDB.append( dbItem )
                             if not configurationItemsFound.has_section( dbItem.ini_file_section ):
                                 configurationItemsFound.add_section( dbItem.ini_file_section )
+                                print( 'i am adding section: ' + dbItem.ini_file_section )
+                            print( 'i am adding field: ' + dbItem.ini_field_name + ' and value: ' + dbItem.ini_value + ' in section: ' + dbItem.ini_file_section )
                             configurationItemsFound.set( dbItem.ini_file_section, dbItem.ini_field_name, dbItem.ini_value )
                         else:
                             # No change, so do nothing
@@ -675,7 +678,7 @@ def main():
                         # NoSectionError or NoIndex error, which means the DB has a vlue that the current file does not.  
                         logging.warn( 'DB contains an item that is not in the file.    Removing it.  Section: ' + dbItem.ini_file_section + ' FieldName: ' 
                             + dbItem.ini_field_name + ' Value: ' + dbItem.ini_value )
-                        listOfConfigurationItemsToDeleteFromTheDB.add( dbItem )
+                        listOfConfigurationItemsToDeleteFromTheDB.append( dbItem )
                 
                 # Now that we iterated through the DB items found, we have to check for ConfigIniItems that were not in the DB
                 for sectionName in currentIniFileConfiguration.sections():
