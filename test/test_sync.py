@@ -18,10 +18,10 @@ class SyncCommandTest( unittest.TestCase ):
     overwrite_version               = '2.0.0'
     test_config_parser_ini_file     = ''
     home_folder                     = os.getcwd()
-    test_configuration_file         = '/home/bleutyler/tools--ini-config-manager/ideal-lamp/test/config_manager_tester.ini'
-    sync_application_template_file  = '/home/bleutyler/tools--ini-config-manager/ideal-lamp/test/input_files/template/sync_test_template.ini'
-    #test_configuration_file         = '/home/tslijboom/git/tools--ini-config-manager/test/config_manager_tester.ini'
-    #sync_application_template_file  = '/home/tslijboom/git/tools--ini-config-manager/test/input_files/template/sync_test_template.ini'
+    #test_configuration_file         = '/home/bleutyler/tools--ini-config-manager/ideal-lamp/test/config_manager_tester.ini'
+    #sync_application_template_file  = '/home/bleutyler/tools--ini-config-manager/ideal-lamp/test/input_files/template/sync_test_template.ini'
+    test_configuration_file         = '/home/tslijboom/git/tools--ini-config-manager/test/config_manager_tester.ini'
+    sync_application_template_file  = '/home/tslijboom/git/tools--ini-config-manager/test/input_files/template/sync_test_template.ini'
     list_of_items_to_delete_at_the_end_of_testing = []
     
     templateFileHandle = open( sync_application_template_file, 'r' )
@@ -45,7 +45,8 @@ class SyncCommandTest( unittest.TestCase ):
             # this is overwritting so these sql instances do not persist, add them to this list_ after the values are overwritten.
 
     def test_sync_command_overwriting_values_already_there( self ):
-        ini_file_with_values = '/home/bleutyler/tools--ini-config-manager/ideal-lamp/test/input_files/config/sync_test_ini_after_test.ini'
+        #ini_file_with_values = '/home/bleutyler/tools--ini-config-manager/ideal-lamp/test/input_files/config/sync_test_ini_after_test.ini'
+        ini_file_with_values = '/home/tslijboom/git/tools--ini-config-manager/test/input_files/config/sync_test_ini_after_test.ini'
 
         configFileHandle = open( ini_file_with_values, 'r' )
         contentsOfConfigFileBeforeTest = configFileHandle.read()
@@ -92,9 +93,12 @@ class SyncCommandTest( unittest.TestCase ):
 
     def test_sync_command_before_values_already_exist_for_version( self ):
         # write to the DB from a file
-        ini_file_with_values    = '/home/bleutyler/tools--ini-config-manager/ideal-lamp/test/input_files/config/sync_test_ini_before_test.ini'
-        #ini_file_with_values    = '/home/tslijboom/git/tools--ini-config-manager/test/input_files/config/sync_test_ini_before_test.ini'
         version_for_blank_write = '1.2.3'
+        #ini_file_with_values    = '/home/bleutyler/tools--ini-config-manager/ideal-lamp/test/input_files/config/sync_test_ini_before_test.ini'
+        ini_file_with_values    = '/home/tslijboom/git/tools--ini-config-manager/test/input_files/config/sync_test_ini_before_test.ini'
+
+        configFileHandle = open( ini_file_with_values, 'r' )
+        contentsOfConfigFileBeforeTest = configFileHandle.read()
         #############
         # make sure the values are not already there
         test_values_dict = { 'filename' : 0 , 'important_word' : 0 , 'port' : 0 }
