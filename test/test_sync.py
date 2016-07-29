@@ -20,6 +20,14 @@ class SyncCommandTest( unittest.TestCase ):
     home_folder                     = os.getcwd()
     test_configuration_file         = '/home/bleutyler/tools--ini-config-manager/ideal-lamp/test/config_manager_tester.ini'
     sync_application_template_file  = '/home/bleutyler/tools--ini-config-manager/ideal-lamp/test/input_files/template/sync_test_template.ini'
+    #test_configuration_file         = '/home/tslijboom/git/tools--ini-config-manager/test/config_manager_tester.ini'
+    #sync_application_template_file  = '/home/tslijboom/git/tools--ini-config-manager/test/input_files/template/sync_test_template.ini'
+    list_of_items_to_delete_at_the_end_of_testing = []
+    
+    templateFileHandle = open( sync_application_template_file, 'r' )
+    contentsOfTemplateFileBeforeTest = templateFileHandle.read()
+
+    
 
     @classmethod
     def setUpClass( self ):
@@ -33,9 +41,15 @@ class SyncCommandTest( unittest.TestCase ):
                                     configured_by_user_flag = True,
                                     changed_by_timestamp = time.time() )
 
+            #self.list_of_items_to_delete_at_the_end_of_testing.append( newConfigurationRow )
+            # this is overwritting so these sql instances do not persist, add them to this list_ after the values are overwritten.
 
     def test_sync_command_overwriting_values_already_there( self ):
         ini_file_with_values = '/home/bleutyler/tools--ini-config-manager/ideal-lamp/test/input_files/config/sync_test_ini_after_test.ini'
+
+        configFileHandle = open( ini_file_with_values, 'r' )
+        contentsOfConfigFileBeforeTest = configFileHandle.read()
+        #ini_file_with_values = '/home/tslijboom/git/tools--ini-config-manager/test/input_files/config/sync_test_ini_after_test.ini'
         #############
         # make sure the values are not already there
         test_values_dict = {}
@@ -64,12 +78,22 @@ class SyncCommandTest( unittest.TestCase ):
             # now look for the values and make sure they are different from before
             if configurationValuesTest:
                 for item in configurationValuesTest:
+                    self.list_of_items_to_delete_at_the_end_of_testing.append( item )
                     if item.ini_field_name in test_values_dict:
                         self.assertNotEqual( test_values_dict[ item.ini_field_name ], item.ini_value, 'DB item ' + item.ini_field_name + 'has been synced with a new value' )
+        # make sure input files are unchanged.
+        configFileHandle = open( ini_file_with_values, 'r' )
+        contentsOfConfigFileAfterTest = configFileHandle.read()
+        templateFileHandle = open( self.sync_application_template_file, 'r' )
+        contentsOfTemplateFileAfterTest = templateFileHandle.read()
+
+        self.assertEqual( contentsOfConfigFileAfterTest, contentsOfConfigFileBeforeTest, 'Configuration File contents are unchanged' )
+        self.assertEqual( contentsOfTemplateFileAfterTest, self.contentsOfTemplateFileBeforeTest, 'Template File contents are unchanged' )
 
     def test_sync_command_before_values_already_exist_for_version( self ):
         # write to the DB from a file
         ini_file_with_values    = '/home/bleutyler/tools--ini-config-manager/ideal-lamp/test/input_files/config/sync_test_ini_before_test.ini'
+        #ini_file_with_values    = '/home/tslijboom/git/tools--ini-config-manager/test/input_files/config/sync_test_ini_before_test.ini'
         version_for_blank_write = '1.2.3'
         #############
         # make sure the values are not already there
@@ -107,9 +131,26 @@ class SyncCommandTest( unittest.TestCase ):
                 for item in configurationValuesTest:
                     if item.ini_field_name in test_values_dict:
                         test_values_dict[ item.ini_field_name ] = 1
+                        self.list_of_items_to_delete_at_the_end_of_testing.append( item )
 
             for field in test_values_dict:
                 self.assertEqual( test_values_dict[ field ], 1, 'default HPNA v' + version_for_blank_write + ' field (' + field + ') has been uploaded' )
+
+        # Test that the template and config files are untouched.
+        configFileHandle = open( ini_file_with_values, 'r' )
+        contentsOfConfigFileAfterTest = configFileHandle.read()
+        templateFileHandle = open( self.sync_application_template_file, 'r' )
+        contentsOfTemplateFileAfterTest = templateFileHandle.read()
+
+        self.assertEqual( contentsOfConfigFileAfterTest, contentsOfConfigFileBeforeTest, 'Configuration File contents are unchanged' )
+        self.assertEqual( contentsOfTemplateFileAfterTest, self.contentsOfTemplateFileBeforeTest, 'Template File contents are unchanged' )
+
+    @classmethod
+    def teardown_class( self ):
+        for item in self.list_of_items_to_delete_at_the_end_of_testing:
+            table_definitions.session.delete( item )
+
+        table_definitions.session.commit()
 
 
 if ( __name__ == '__main__' ):

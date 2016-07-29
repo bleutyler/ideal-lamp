@@ -5,8 +5,8 @@
 #    > Support: Tyler Slijboom
 #    > Company: Blackberry
 #    > Contact: tslijboom@juniper.net
-#    > Version: 0.4.2
-#    > Revision Date: 2016-07-22
+#    > Version: 0.5.0
+#    > Revision Date: 2016-07-28
 #       
 # ####################################################################
 # ----------[ IMPORTS ]----------
@@ -654,28 +654,35 @@ def main():
                 table_definitions.currentConfigurationValues.server              == serverName ).order_by(
                 table_definitions.currentConfigurationValues.ini_file_section ).all()
 
+            # CCP sync01
             if testForApplicationInTheDB:
                 ## We have to update these items and update the DB
                 # iterate through the B items and update them as needed.
+                # CCP sync1.1
                 configurationItemsFound = configparser.ConfigParser()
                 for dbItem in testForApplicationInTheDB:
                     # find the item in the current confitg
                     try: 
                         print( ' Iam llooking for the value of ' + dbItem.ini_file_section + '::' + dbItem.ini_field_name )
                         fileValue = currentIniFileConfiguration.get( dbItem.ini_file_section, dbItem.ini_field_name )
+                        # CCP sync1.1.1
                         if ( fileValue != dbItem.ini_value ):
+                            # CCP sync1.1.1.1
                             dbItem.ini_value = fileValue
                             listOfConfiguratinItemsForTheDB.append( dbItem )
                             if not configurationItemsFound.has_section( dbItem.ini_file_section ):
                                 configurationItemsFound.add_section( dbItem.ini_file_section )
+                                # CCP sync1.1.1.1.1
                                 print( 'i am adding section: ' + dbItem.ini_file_section )
                             print( 'i am adding field: ' + dbItem.ini_field_name + ' and value: ' + dbItem.ini_value + ' in section: ' + dbItem.ini_file_section )
                             configurationItemsFound.set( dbItem.ini_file_section, dbItem.ini_field_name, dbItem.ini_value )
                         else:
                             # No change, so do nothing
                             pass
+                            # CCP sync1.1.1.2
                     except:
                         # NoSectionError or NoIndex error, which means the DB has a vlue that the current file does not.  
+                        # CCP sync1.1.2
                         logging.warn( 'DB contains an item that is not in the file.    Removing it.  Section: ' + dbItem.ini_file_section + ' FieldName: ' 
                             + dbItem.ini_field_name + ' Value: ' + dbItem.ini_value )
                         listOfConfigurationItemsToDeleteFromTheDB.append( dbItem )
@@ -683,9 +690,14 @@ def main():
                 # Now that we iterated through the DB items found, we have to check for ConfigIniItems that were not in the DB
                 for sectionName in currentIniFileConfiguration.sections():
                     for field in currentIniFileConfiguration.items( sectionName ):
+                        print( 'hey yo I am here' )
                         if configurationItemsFound.has_option( sectionName, field ):
+                            print( 'hey yo I am also here' )
                             pass
+                            # CCP sync1.1.3
                         else:
+                            # CCP sync1.1.4
+                            print( 'hey yo I am about to blow up here' )
                             newConfigurationRow = table_definitions.currentConfigurationValues( application = applicationName,
                                 ini_file_section = sectionName, ini_field_name = field,
                                 application_version = applicationVersion, server = serverName,
@@ -695,6 +707,7 @@ def main():
 
 
             else:
+                # CCP sync1.2
                 ## No current entries in the DB, so just add new SQLAlchemy objects to insert them
                 for sectionName in currentIniFileConfiguration.sections():
                     for configItem in currentIniFileConfiguration.items( sectionName ):
@@ -710,8 +723,7 @@ def main():
     
 
         except Exception as e:
-            #error = sys.exc_info()[0]
-            #print( 'Failed to read in config file ' + currentIniFile )
+            # CCP sync1.3
             print( ':::' + str(e) )
             sys.exit( 7 )
 

@@ -14,12 +14,12 @@ import config_manager
 class DefaultApplicationTester( unittest.TestCase ):
     application     = 'defaultTester' 
     server          = 'TSFDAT_test'
-    app_homefolder  = '/home/tslijboom/git/tools--ini-config-manager/test/input_files'
-    #app_homefolder  = '/home/bleutyler/tools--ini-config-manager/ideal-lamp/test/input_files'
+    #app_homefolder  = '/home/tslijboom/git/tools--ini-config-manager/test/input_files'
+    app_homefolder  = '/home/bleutyler/tools--ini-config-manager/ideal-lamp/test/input_files'
     user            = 'testClass'
     section         = 'hpna'
-    test_configuration_file = '/home/tslijboom/git/tools--ini-config-manager/test/config_manager_tester.ini'
-    #test_configuration_file = '/home/bleutyler/tools--ini-config-manager/ideal-lamp/test/config_manager_tester.ini'
+    #test_configuration_file = '/home/tslijboom/git/tools--ini-config-manager/test/config_manager_tester.ini'
+    test_configuration_file = '/home/bleutyler/tools--ini-config-manager/ideal-lamp/test/config_manager_tester.ini'
     list_of_items_to_delete_at_the_end_of_testing = []
 
     @classmethod
@@ -102,10 +102,10 @@ class DefaultApplicationTester( unittest.TestCase ):
 
         #############
         # Insert new defaults via the command line, and make sure it is defaulted to version 1.0.0
-        input_file      = '/home/tslijboom/git/tools--ini-config-manager/test/input_files/config/default_setting_v.1.0.0.ini'
-        template_file   = '/home/tslijboom/git/tools--ini-config-manager/test/input_files/template/default_setting_v.1.0.0.ini'
-        #input_file      = '/home/bleutyler/tools--ini-config-manager/ideal-lamp/test/input_files/config/default_setting_v.1.0.0.ini'
-        #template_file   = '/home/bleutyler/tools--ini-config-manager/ideal-lamp/test/input_files/template/default_setting_v.1.0.0.ini'
+        #input_file      = '/home/tslijboom/git/tools--ini-config-manager/test/input_files/config/default_setting_v.1.0.0.ini'
+        #template_file   = '/home/tslijboom/git/tools--ini-config-manager/test/input_files/template/default_setting_v.1.0.0.ini'
+        input_file      = '/home/bleutyler/tools--ini-config-manager/ideal-lamp/test/input_files/config/default_setting_v.1.0.0.ini'
+        template_file   = '/home/bleutyler/tools--ini-config-manager/ideal-lamp/test/input_files/template/default_setting_v.1.0.0.ini'
         command_arguments_list   = [ '-a', self.application, '-c', self.test_configuration_file, '-m', 'setdefaults',
                                     '-s', self.server, '-i', input_file, '-t', template_file, ]
         with unittest.mock.patch( 'sys.argv', command_arguments_list ):
@@ -146,10 +146,10 @@ class DefaultApplicationTester( unittest.TestCase ):
 
         #############
         # Insert new defaults via the command line, and make sure it is defaulted to version 1.0.0
-        input_file      = '/home/tslijboom/git/tools--ini-config-manager/test/input_files/config/default_setting_v.1.0.0.ini'
-        template_file   = '/home/tslijboom/git/tools--ini-config-manager/test/input_files/template/default_setting_v.1.0.0.ini'
-        #input_file      = '/home/bleutyler/tools--ini-config-manager/ideal-lamp/test/input_files/config/default_setting_v.1.0.0.ini'
-        #template_file   = '/home/bleutyler/git/tools--ini-config-manager/ideal-lamp/test/input_files/template/default_setting_v.1.0.0.ini'
+        #input_file      = '/home/tslijboom/git/tools--ini-config-manager/test/input_files/config/default_setting_v.1.0.0.ini'
+        #template_file   = '/home/tslijboom/git/tools--ini-config-manager/test/input_files/template/default_setting_v.1.0.0.ini'
+        input_file      = '/home/bleutyler/tools--ini-config-manager/ideal-lamp/test/input_files/config/default_setting_v.1.0.0.ini'
+        template_file   = '/home/bleutyler/git/tools--ini-config-manager/ideal-lamp/test/input_files/template/default_setting_v.1.0.0.ini'
         command_arguments_list   = [ '-a', self.application, '-c', self.test_configuration_file, '-m', 'setdefaults',
                                     '-s', self.server, '-i', input_file, '-t', template_file, ]
         with unittest.mock.patch( 'sys.argv', command_arguments_list ):
