@@ -1,0 +1,78 @@
+[general]
+; Source address for all notification emails.
+emailFrom = bbgn-td@rim.net
+
+; Location of the log file.
+logfile = /usr/local/NTW-Dev-Tools/var/local/NetworkDiscovery/NetworkDiscovery.log
+
+; Location of the OpNET CDP export
+opnetCDPDump = /usr/local/NTW-Dev-Tools/var/share/NetworkDiscovery/opnet-cdp.csv
+
+; Location of the SMARTS inventory export
+smartsDump = /mnt/netapp/dump/SmartsData
+
+
+
+[CDP]
+; Command to run to get the cdp neighbors
+cmd=show cdp neighbor detail
+
+; The HPNA mode to use when running the diagnostic
+mode=Cisco IOS enable
+
+; The HPNA group containing CDP capable devices
+group=Network Discovery - Cisco Devices
+
+
+
+[hpna]
+
+; The HPNA server
+server = hpna-script-primary.netmd.ntw.blackberry
+
+; The HPNA username
+username = discovery
+
+; The HPNA password
+password = hpna_super_secret_password
+
+[iTop]
+
+; The iTop server
+iTopServer = app1.cmdb.altus.rim.net
+
+; The iTop ssh username
+iTopUsername = local
+
+; The iTop ssh password
+; See the code for the work-around for the # in the password.
+; If the password changes, the in-code hack will need to be removed.
+iTopPassword = "secret_password_with_a_#_mark"
+
+; The iTop synchro username
+synchroUsername = svc_ndw
+
+; The iTop synchro password
+synchroPassword = another_password
+
+; Timeout in seconds
+; How long should we wait before giving up on iTop
+dbUpdateTimeout = 300
+
+[postgresql]
+
+; The postgres username
+username = discovery_user
+
+; The postgres password
+password = top_secret
+
+; The postgres server
+server = toolsdb.netmd.ntw.blackberry
+
+; The CMDB schema to use
+schemacmdb = assets
+
+; The discovery schema to use
+schemadiscovery = discovery
+

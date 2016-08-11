@@ -1,0 +1,13 @@
+[GENERAL] 
+; Source address for all notification emails.
+emailFrom isAnEmailAddress
+
+; Location of the log file.
+logfile isAlphaNumericString
+
+; Location of the OpNET CDP export
+opnetCDPDump  isAlphaNumericString
+
+
+
+

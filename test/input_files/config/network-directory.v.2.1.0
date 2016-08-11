@@ -1,0 +1,48 @@
+[general]
+; Source address for all notification emails.
+emailFrom = bbgn-td@rim.net
+
+; Location of the log file.
+logfile = /usr/local/NTW-Dev-Tools/var/local/NetworkDiscovery/NetworkDiscovery.log
+
+; Location of the OpNET CDP export
+opnetCDPDump = /usr/local/NTW-Dev-Tools/var/share/NetworkDiscovery/opnet-cdp.csv
+
+; Location of the SMARTS inventory export
+smartsDump = /mnt/netapp/dump/SmartsData
+
+
+
+[CDP]
+; Command to run to get the cdp neighbors
+cmd=show cdp neighbor detail
+
+; The HPNA mode to use when running the diagnostic
+mode=Cisco IOS enable
+
+; The HPNA group containing CDP capable devices
+group=Network Discovery - Cisco Devices
+
+
+
+[hpna]
+
+; The HPNA server
+server = hpna-script-primary.netmd.ntw.blackberry
+
+; The HPNA username
+username = discovery
+
+; The HPNA password
+password = hpna_super_secret_password
+
+[postgresql]
+
+; The postgres username
+username = discovery_user
+
+; The postgres password
+password = top_secret
+
+; The postgres server
+server = toolsdb.netmd.ntw.blackberry

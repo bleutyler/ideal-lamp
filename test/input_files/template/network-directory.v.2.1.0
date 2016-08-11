@@ -1,0 +1,49 @@
+[GENERAL] 
+; Source address for all notification emails.
+emailFrom isAnEmailAddress
+
+; Location of the log file.
+logfile isAlphaNumericString
+
+; Location of the OpNET CDP export
+opnetCDPDump  isAlphaNumericString
+
+; Location of the SMARTS inventory export
+smartsDump  isAlphaNumericString
+
+
+
+[CDP]
+; Command to run to get the cdp neighbors
+cmd isAlphaNumericString 
+
+; The HPNA mode to use when running the diagnostic
+mode isAlphaNumericString
+
+; The HPNA group containing CDP capable devices
+group isAlphaNumericString 
+
+
+
+[hpna]
+
+; The HPNA server
+server  isAlphaNumericString 
+
+; The HPNA username
+username  isAlphaNumericString 
+
+; The HPNA password
+password  isAlphaNumericString 
+
+
+[postgresql]
+
+; The postgres username
+username  isAlphaNumericString 
+
+; The postgres password
+password  isAlphaNumericString 
+
+; The postgres server
+server  isAlphaNumericString 

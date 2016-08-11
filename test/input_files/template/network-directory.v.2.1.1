@@ -1,0 +1,78 @@
+[GENERAL] 
+; Source address for all notification emails.
+emailFrom isAnEmailAddress
+
+; Location of the log file.
+logfile isAlphaNumericString
+
+; Location of the OpNET CDP export
+opnetCDPDump  isAlphaNumericString
+
+; Location of the SMARTS inventory export
+smartsDump  isAlphaNumericString
+
+
+
+[CDP]
+; Command to run to get the cdp neighbors
+cmd isAlphaNumericString 
+
+; The HPNA mode to use when running the diagnostic
+mode isAlphaNumericString
+
+; The HPNA group containing CDP capable devices
+group isAlphaNumericString 
+
+
+
+[hpna]
+
+; The HPNA server
+server  isAlphaNumericString 
+
+; The HPNA username
+username  isAlphaNumericString 
+
+; The HPNA password
+password  isAlphaNumericString 
+
+[iTop]
+
+; The iTop server
+iTopServer  isAlphaNumericString 
+
+; The iTop ssh username
+iTopUsername  isAlphaNumericString 
+
+; The iTop ssh password
+; See the code for the work-around for the # in the password.
+; If the password changes, the in-code hack will need to be removed.
+iTopPassword  isAlphaNumericString 
+
+; The iTop synchro username
+synchroUsername  isAlphaNumericString 
+
+; The iTop synchro password
+synchroPassword  isAlphaNumericString 
+
+; Timeout in seconds
+; How long should we wait before giving up on iTop
+dbUpdateTimeout  isAnInteger 
+
+[postgresql]
+
+; The postgres username
+username  isAlphaNumericString 
+
+; The postgres password
+password  isAlphaNumericString 
+
+; The postgres server
+server  isAlphaNumericString 
+
+; The CMDB schema to use
+schemacmdb  isAlphaNumericString 
+
+; The discovery schema to use
+schemadiscovery  isAlphaNumericString 
+

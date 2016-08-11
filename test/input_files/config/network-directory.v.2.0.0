@@ -1,0 +1,13 @@
+[general]
+; Source address for all notification emails.
+emailFrom = bbgn-td@rim.net
+
+; Location of the log file.
+logfile = /usr/local/NTW-Dev-Tools/var/local/NetworkDiscovery/NetworkDiscovery.log
+
+; Location of the OpNET CDP export
+opnetCDPDump = /usr/local/NTW-Dev-Tools/var/share/NetworkDiscovery/opnet-cdp.csv
+
+; Location of the SMARTS inventory export
+smartsDump = /mnt/netapp/dump/SmartsData
+
