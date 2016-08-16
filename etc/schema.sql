@@ -4,7 +4,7 @@ create table application_default_values (
     application          varchar(50)     not null,
     ini_file_section            varchar(50)     not null,
     ini_field_name              varchar(50)     not null,
-    ini_value                   varchar(50)     not null,
+    ini_value                   varchar(300)     not null,
     application_version         varchar(20)     not null,       -- example: 1.0.34
     changed_by_user             varchar(20)     not null,       -- username of who changed it
     changed_by_timestamp        integer         not null        -- epoch timestamp when the above user updated this value
@@ -20,7 +20,7 @@ create table current_configuration_values (
     application          varchar(50)     not null,
     ini_file_section            varchar(50)     not null,
     ini_field_name              varchar(50)     not null,
-    ini_value                   varchar(50)     ,
+    ini_value                   varchar(300)     ,
     constraints_for_value       varchar(100)    ,
     application_version         varchar(20)     not null,       -- example: 1.0.34
     configured_by_user_flag     boolean         not null default True,
@@ -59,7 +59,7 @@ create table configuration_history (
     application      varchar(50)     not null,
     ini_file_section        varchar(50)     not null,
     ini_field_name          varchar(50)     not null,
-    ini_value               varchar(50)     not null,
+    ini_value               varchar(300)     not null,
     application_version         varchar(20)     not null,       -- example: 1.0.34
     changed_by_user         varchar(20)     not null,       -- username of who changed it
     start_timestamp         integer         not null,       -- epoch timestamp when the above user updated this value
